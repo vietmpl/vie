@@ -1,0 +1,18 @@
+{{ !flag }}
+{{ !true }}
+{{ !!"str" }}
+{{ not true }}
+{{ not "srr" }}
+{{ not value }}
+
+---
+
+{{ ! flag }}
+{{!true}}
+{{ !!"str" }}
+{{ not 
+
+true }}
+{{ not  "srr" }}
+{{ not      value }}
+
