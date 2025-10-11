@@ -1,14 +1,12 @@
 module github.com/vietmpl/vie
 
-go 1.25.1
-
-replace github.com/vietmpl/tree-sitter-vie => ./tree-sitter-vie
+go 1.25.2
 
 require (
 	github.com/charmbracelet/fang v0.4.3
 	github.com/spf13/cobra v1.10.1
 	github.com/tree-sitter/go-tree-sitter v0.25.0
-	github.com/vietmpl/tree-sitter-vie v0.0.0-00010101000000-000000000000
+	github.com/vietmpl/tree-sitter-vie v0.0.0-20251010105935-30d693784210
 )
 
 require (
