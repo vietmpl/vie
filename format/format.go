@@ -2,174 +2,96 @@ package format
 
 import (
 	"fmt"
-	"io"
 
-	ts "github.com/tree-sitter/go-tree-sitter"
-	"github.com/vietmpl/tree-sitter-vie/bindings/go"
+	"github.com/vietmpl/vie/ast"
 )
 
-var language = ts.NewLanguage(tree_sitter_vie.Language())
+type formatter struct {
+	out   []byte
+	level uint
+}
 
-func Source(w io.Writer, src []byte) error {
-	tsParser := ts.NewParser()
-	tsParser.SetLanguage(language)
-	defer tsParser.Close()
-
-	tree := tsParser.Parse(src, nil)
-	defer tree.Close()
-
-	c := tree.Walk()
-	defer c.Close()
-
-	if !c.GotoFirstChild() {
-		return nil
-	}
-
-	for {
-		n := c.Node()
-		switch n.Kind() {
-		case "text":
-			if _, err := w.Write(nodeContent(src, n)); err != nil {
-				return err
-			}
-		case "render_block":
-			c.GotoFirstChild()
-			// Skip '{{'
-			c.GotoNextSibling()
-			if _, err := w.Write([]byte("{{ ")); err != nil {
-				return err
-			}
-			if err := formatExpr(w, src, c); err != nil {
-				return err
-			}
-			if _, err := w.Write([]byte(" }}")); err != nil {
-				return err
-			}
-			c.GotoParent()
-		// case "if_block":
-		// 	formatIf(node)
-		// case "switch_block":
-		// 	formatSwitch(node)
-		default:
-			panic(fmt.Sprintf("unexpected node kind %s", n.Kind()))
-		}
-
-		if !c.GotoNextSibling() {
-			return nil
-		}
+func newFormatter() *formatter {
+	return &formatter{
+		// TODO(skewb1k): consider pre-alloc.
+		out:   make([]byte, 0),
+		level: 0,
 	}
 }
 
-func formatExpr(w io.Writer, src []byte, c *ts.TreeCursor) error {
-	n := c.Node()
-	switch n.Kind() {
-	case "identifier", "string_literal", "boolean_literal":
-		if _, err := w.Write(nodeContent(src, n)); err != nil {
-			return err
-		}
+func Source(src *ast.SourceFile) []byte {
+	f := newFormatter()
+	f.blocks(src.Blocks)
+	return f.out
+}
 
-	case "unary_expression":
-		c.GotoFirstChild()
-		defer c.GotoParent()
-		op := nodeContent(src, c.Node())
-		if _, err := w.Write(op); err != nil {
-			return err
-		}
-		// do not insert whitespace after '!'
-		if string(op) != "!" {
-			if _, err := w.Write([]byte{' '}); err != nil {
-				return err
-			}
-		}
+func (f *formatter) blocks(blocks []ast.Block) {
+	for _, b := range blocks {
+		f.block(b)
+	}
+}
 
-		c.GotoNextSibling()
-		if err := formatExpr(w, src, c); err != nil {
-			return err
-		}
+func (f *formatter) block(b ast.Block) {
+	switch n := b.(type) {
+	case *ast.TextBlock:
+		f.out = append(f.out, n.Value...)
+	case *ast.RenderBlock:
+		f.out = append(f.out, "{{ "...)
+		f.expr(n.Expr)
+		f.out = append(f.out, " }}"...)
+	default:
+		panic(fmt.Sprintf("format: unexpected block kind %T", b))
+	}
+}
 
-	case "binary_expression":
-		c.GotoFirstChild()
-		defer c.GotoParent()
-		if err := formatExpr(w, src, c); err != nil {
-			return err
-		}
-		if _, err := w.Write([]byte{' '}); err != nil {
-			return err
-		}
+func (f *formatter) expr(e ast.Expr) {
+	switch n := e.(type) {
+	case *ast.BasicLit:
+		f.out = append(f.out, n.Value...)
 
-		c.GotoNextSibling()
-		if _, err := w.Write(nodeContent(src, c.Node())); err != nil {
-			return err
-		}
-		if _, err := w.Write([]byte{' '}); err != nil {
-			return err
-		}
+	case *ast.Ident:
+		f.out = append(f.out, n.Value...)
 
-		c.GotoNextSibling()
-		if err := formatExpr(w, src, c); err != nil {
-			return err
-		}
+	case *ast.UnaryExpr:
+		f.out = append(f.out, n.Op...)
 
-	case "call_expression":
-		c.GotoFirstChild()
-		defer c.GotoParent()
-		if _, err := w.Write(nodeContent(src, c.Node())); err != nil {
-			return err
+		// Do not insert whitespace after '!'
+		if n.Op[0] != '!' {
+			f.out = append(f.out, ' ')
 		}
+		f.expr(n.Expr)
 
-		// Step into 'arguments'
-		c.GotoNextSibling()
-		c.GotoFirstChild()
-		defer c.GotoParent()
+	case *ast.BinaryExpr:
+		f.expr(n.Left)
+		f.out = append(f.out, ' ')
+		f.out = append(f.out, n.Op...)
+		f.out = append(f.out, ' ')
+		f.expr(n.Right)
 
-		// Skip '('
-		if _, err := w.Write([]byte{'('}); err != nil {
-			return err
+	case *ast.ParenExpr:
+		f.out = append(f.out, '(')
+		f.expr(n.Expr)
+		f.out = append(f.out, ')')
+
+	case *ast.CallExpr:
+		f.expr(n.Func)
+		f.out = append(f.out, '(')
+		if len(n.Args) > 0 {
+			f.expr(n.Args[0])
 		}
-
-		// TODO(skewb1k): optimize and remove duplication
-		for c.GotoNextSibling() && c.Node().Kind() != ")" {
-			if err := formatExpr(w, src, c); err != nil {
-				return err
-			}
-			// peek ahead
-			if c.GotoNextSibling() && c.Node().Kind() != ")" {
-				if _, err := w.Write([]byte(", ")); err != nil {
-					return err
-				}
-				continue
-			}
-			break
+		for i := 1; i < len(n.Args); i++ {
+			f.out = append(f.out, ", "...)
+			f.expr(n.Args[i])
 		}
+		f.out = append(f.out, ')')
 
-		if _, err := w.Write([]byte{')'}); err != nil {
-			return err
-		}
-
-	case "pipe_expression":
-		c.GotoFirstChild()
-		defer c.GotoParent()
-		if err := formatExpr(w, src, c); err != nil {
-			return err
-		}
-
-		// Skip '|'
-		c.GotoNextSibling()
-		if _, err := w.Write([]byte(" | ")); err != nil {
-			return err
-		}
-
-		c.GotoNextSibling()
-		if err := formatExpr(w, src, c); err != nil {
-			return err
-		}
+	case *ast.PipeExpr:
+		f.expr(n.Arg)
+		f.out = append(f.out, " | "...)
+		// write Ident
+		f.out = append(f.out, n.Func.Value...)
 
 	default:
-		panic(fmt.Sprintf("unexpected node kind %s", n.Kind()))
+		panic(fmt.Sprintf("format: unexpected expr kind %T", e))
 	}
-	return nil
-}
-
-func nodeContent(src []byte, n *ts.Node) []byte {
-	return src[n.StartByte():n.EndByte()]
 }

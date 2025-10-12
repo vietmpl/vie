@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -11,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/vietmpl/vie/format"
+	"github.com/vietmpl/vie/parser"
 )
 
 // Populated by goreleaser during build
@@ -52,12 +52,9 @@ func formatCmd() *cobra.Command {
 				return err
 			}
 
-			var buf bytes.Buffer
-
-			if err := format.Source(&buf, src); err != nil {
-				return err
-			}
-			fmt.Fprint(cmd.OutOrStdout(), buf.String())
+			sourceFile, err := parser.ParseFile(src)
+			res := format.Source(sourceFile)
+			fmt.Fprint(cmd.OutOrStdout(), string(res))
 			return nil
 		},
 	}
