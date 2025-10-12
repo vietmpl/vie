@@ -193,6 +193,22 @@ func (p parser) expr() (ast.Expr, error) {
 		pipe.Func = &ast.Ident{Value: p.nodeContent()}
 		return pipe, nil
 
+	case "parenthesized_expression":
+		p.c.GotoFirstChild()
+		defer p.c.GotoParent()
+
+		// Skip '('
+		p.c.GotoNextSibling()
+
+		expr, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+
+		return &ast.ParenExpr{
+			Expr: expr,
+		}, nil
+
 	default:
 		panic(fmt.Sprintf("parser: unexpected node kind %s", n.Kind()))
 	}
