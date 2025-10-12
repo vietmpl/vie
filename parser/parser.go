@@ -62,7 +62,7 @@ func (p parser) blocks() ([]ast.Block, error) {
 func (p parser) block() (ast.Block, error) {
 	n := p.c.Node()
 	switch n.Kind() {
-	case "text":
+	case "text_block":
 		return &ast.TextBlock{
 			Value: p.nodeContent(),
 		}, nil
