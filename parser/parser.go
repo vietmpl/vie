@@ -86,7 +86,7 @@ func (p parser) stmt() (ast.Stmt, error) {
 	case "if_statement":
 		p.c.GotoFirstChild()
 		defer p.c.GotoParent()
-		ifstmt := &ast.IfStmt{}
+		ifStmt := &ast.IfStmt{}
 
 		// Consume '{%'
 		p.c.GotoNextSibling()
@@ -97,7 +97,7 @@ func (p parser) stmt() (ast.Stmt, error) {
 		if err != nil {
 			return nil, err
 		}
-		ifstmt.Condition = cond
+		ifStmt.Condition = cond
 		p.c.GotoNextSibling()
 
 		// Consume '%}'
@@ -108,7 +108,7 @@ func (p parser) stmt() (ast.Stmt, error) {
 			if err != nil {
 				return nil, err
 			}
-			ifstmt.Consequence = consequence
+			ifStmt.Consequence = consequence
 			p.c.GotoNextSibling()
 		}
 
@@ -117,15 +117,76 @@ func (p parser) stmt() (ast.Stmt, error) {
 			if err != nil {
 				return nil, err
 			}
-			ifstmt.Alternative = alt
+			ifStmt.Alternative = alt
 		}
+		return ifStmt, nil
 
-		return ifstmt, nil
+	case "switch_statement":
+		p.c.GotoFirstChild()
+		defer p.c.GotoParent()
+		switchStmt := &ast.SwitchStmt{}
 
-	// case "switch_block":
+		// Consume '{%'
+		p.c.GotoNextSibling()
+		// Consume 'switch'
+		p.c.GotoNextSibling()
+
+		val, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+		switchStmt.Value = val
+		p.c.GotoNextSibling()
+
+		// Consume '%}'
+		p.c.GotoNextSibling()
+
+		for p.c.FieldName() == "cases" {
+			caseClause, err := p.caseClause()
+			if err != nil {
+				return nil, err
+			}
+			switchStmt.Cases = append(switchStmt.Cases, caseClause)
+
+			if !p.c.GotoNextSibling() {
+				break
+			}
+		}
+		return switchStmt, nil
+
 	default:
 		panic(fmt.Sprintf("parser: unexpected block kind %s", n.Kind()))
 	}
+}
+
+func (p parser) caseClause() (*ast.CaseClause, error) {
+	p.c.GotoFirstChild()
+	defer p.c.GotoParent()
+	caseClause := &ast.CaseClause{}
+
+	// Consume '{%'
+	p.c.GotoNextSibling()
+	// Consume 'case'
+	p.c.GotoNextSibling()
+
+	val, err := p.expr()
+	if err != nil {
+		return nil, err
+	}
+	caseClause.Value = val
+	p.c.GotoNextSibling()
+
+	// Consume '%}'
+	p.c.GotoNextSibling()
+
+	if p.c.FieldName() == "body" {
+		body, err := p.stmts()
+		if err != nil {
+			return nil, err
+		}
+		caseClause.Body = body
+	}
+	return caseClause, nil
 }
 
 func (p parser) alt() (any, error) {

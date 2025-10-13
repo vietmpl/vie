@@ -6,7 +6,7 @@ require (
 	github.com/charmbracelet/fang v0.4.3
 	github.com/spf13/cobra v1.10.1
 	github.com/tree-sitter/go-tree-sitter v0.25.0
-	github.com/vietmpl/tree-sitter-vie v0.0.0-20251012222811-76df5d4ed4df
+	github.com/vietmpl/tree-sitter-vie v0.0.0-20251013000844-ba3c40ab7c60
 )
 
 require (

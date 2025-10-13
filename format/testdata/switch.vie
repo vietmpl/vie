@@ -1,0 +1,35 @@
+{% switch key %}
+{% end %}
+
+{% switch key %}
+{% end %}
+
+{% switch key %}
+{% case a %}
+{% end %}
+
+{% switch key %}
+{% case a %}
+Text
+{% case b %}
+Text
+{% end %}
+
+---
+
+{% switch key %}{% end %}
+
+{% switch key %}
+{% end %}
+
+{% switch key %}
+{% case a %}
+{% end %}
+
+{% switch key %}
+{% case a %}
+Text
+{% case b %}
+Text
+{% end %}
+

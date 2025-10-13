@@ -49,6 +49,18 @@ func (f *formatter) stmt(s ast.Stmt) {
 		f.alt(n.Alternative)
 		f.out = append(f.out, "{% end %}"...)
 
+	case *ast.SwitchStmt:
+		f.out = append(f.out, "{% switch "...)
+		f.expr(n.Value)
+		f.out = append(f.out, " %}\n"...)
+		for _, c := range n.Cases {
+			f.out = append(f.out, "{% case "...)
+			f.expr(c.Value)
+			f.out = append(f.out, " %}"...)
+			f.stmts(c.Body)
+		}
+		f.out = append(f.out, "{% end %}"...)
+
 	default:
 		panic(fmt.Sprintf("format: unexpected stmt type %T", s))
 	}

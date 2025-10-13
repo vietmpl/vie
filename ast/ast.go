@@ -48,7 +48,7 @@ type (
 
 	SwitchStmt struct {
 		Value Expr
-		Cases []CaseClause
+		Cases []*CaseClause
 	}
 )
 
