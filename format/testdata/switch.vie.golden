@@ -1,4 +1,5 @@
-{% switch key %}{% end %}
+{% switch key %}
+{% end %}
 
 {% switch key %}
 {% end %}
