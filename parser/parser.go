@@ -32,62 +32,164 @@ func ParseFile(src []byte) (*ast.SourceFile, error) {
 		c:   cursor,
 	}
 
-	blocks, err := p.blocks()
+	stmts, err := p.stmts()
 	if err != nil {
 		return nil, err
 	}
 	return &ast.SourceFile{
-		Blocks: blocks,
+		Stmts: stmts,
 	}, nil
 }
 
-func (p parser) blocks() ([]ast.Block, error) {
+func (p parser) stmts() ([]ast.Stmt, error) {
 	if !p.c.GotoFirstChild() {
 		return nil, nil
 	}
-	var b []ast.Block
+	defer p.c.GotoParent()
+	var stmts []ast.Stmt
 	for {
-		bl, err := p.block()
+		stmt, err := p.stmt()
 		if err != nil {
 			return nil, err
 		}
-		b = append(b, bl)
+		stmts = append(stmts, stmt)
 		if !p.c.GotoNextSibling() {
 			break
 		}
 	}
-	return b, nil
+	return stmts, nil
 }
 
-func (p parser) block() (ast.Block, error) {
+func (p parser) stmt() (ast.Stmt, error) {
 	n := p.c.Node()
 	switch n.Kind() {
-	case "text_block":
-		return &ast.TextBlock{
+	case "text":
+		return &ast.Text{
 			Value: p.nodeContent(),
 		}, nil
-	case "render_block":
+
+	case "render_statement":
 		p.c.GotoFirstChild()
 		defer p.c.GotoParent()
 
-		// Skip '{{'
+		// Consume '{{'
 		p.c.GotoNextSibling()
 
 		expr, err := p.expr()
 		if err != nil {
 			return nil, err
 		}
-
-		return &ast.RenderBlock{
+		return &ast.RenderStmt{
 			Expr: expr,
 		}, nil
 
-	// case "if_block":
-	// 	formatIf(node)
+	case "if_statement":
+		p.c.GotoFirstChild()
+		defer p.c.GotoParent()
+		ifstmt := &ast.IfStmt{}
+
+		// Consume '{%'
+		p.c.GotoNextSibling()
+		// Consume 'if'
+		p.c.GotoNextSibling()
+
+		cond, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+		ifstmt.Condition = cond
+		p.c.GotoNextSibling()
+
+		// Consume '%}'
+		p.c.GotoNextSibling()
+
+		if p.c.FieldName() == "consequence" {
+			consequence, err := p.stmts()
+			if err != nil {
+				return nil, err
+			}
+			ifstmt.Consequence = consequence
+			p.c.GotoNextSibling()
+		}
+
+		if p.c.FieldName() == "alternative" {
+			alt, err := p.alt()
+			if err != nil {
+				return nil, err
+			}
+			ifstmt.Alternative = alt
+		}
+
+		return ifstmt, nil
+
 	// case "switch_block":
-	// 	formatSwitch(node)
 	default:
-		panic(fmt.Sprintf("parser: unexpected node kind %s", n.Kind()))
+		panic(fmt.Sprintf("parser: unexpected block kind %s", n.Kind()))
+	}
+}
+
+func (p parser) alt() (any, error) {
+	n := p.c.Node()
+	switch n.Kind() {
+	case "else_if_clause":
+		p.c.GotoFirstChild()
+		defer p.c.GotoParent()
+		elseIf := &ast.ElseIfClause{}
+
+		// Consume '{%'
+		p.c.GotoNextSibling()
+		// Consume 'else'
+		p.c.GotoNextSibling()
+		// Consume 'if'
+		p.c.GotoNextSibling()
+
+		cond, err := p.expr()
+		if err != nil {
+			return nil, err
+		}
+		elseIf.Condition = cond
+		p.c.GotoNextSibling()
+
+		// Consume '%}'
+		p.c.GotoNextSibling()
+
+		consequence, err := p.stmts()
+		if err != nil {
+			return nil, err
+		}
+		elseIf.Consequence = consequence
+
+		if p.c.GotoNextSibling() {
+			alt, err := p.alt()
+			if err != nil {
+				return nil, err
+			}
+			elseIf.Alternative = alt
+		}
+
+		return elseIf, nil
+
+	case "else_clause":
+		p.c.GotoFirstChild()
+		defer p.c.GotoParent()
+
+		// Consume '{%'
+		p.c.GotoNextSibling()
+		// Consume 'end'
+		p.c.GotoNextSibling()
+		// Consume '%}'
+		p.c.GotoNextSibling()
+
+		consequence, err := p.stmts()
+		if err != nil {
+			return nil, err
+		}
+		return &ast.ElseClause{
+			Consequence: consequence,
+		}, nil
+
+	default:
+		panic(fmt.Sprintf("parser: unexpected alt kind %s", n.Kind()))
 	}
 }
 
@@ -99,36 +201,35 @@ func (p parser) expr() (ast.Expr, error) {
 			Kind:  ast.KindString,
 			Value: p.nodeContent(),
 		}, nil
+
 	case "boolean_literal":
 		return &ast.BasicLit{
 			Kind:  ast.KindBool,
 			Value: p.nodeContent(),
 		}, nil
+
 	case "identifier":
 		return &ast.Ident{Value: p.nodeContent()}, nil
 
 	case "unary_expression":
 		p.c.GotoFirstChild()
 		defer p.c.GotoParent()
-
 		unary := &ast.UnaryExpr{}
 
 		unary.Op = p.nodeContent()
 
 		p.c.GotoNextSibling()
-
 		expr, err := p.expr()
 		if err != nil {
 			return nil, err
 		}
-
 		unary.Expr = expr
+
 		return unary, nil
 
 	case "binary_expression":
 		p.c.GotoFirstChild()
 		defer p.c.GotoParent()
-
 		binary := &ast.BinaryExpr{}
 
 		left, err := p.expr()
@@ -156,21 +257,22 @@ func (p parser) expr() (ast.Expr, error) {
 
 		call.Func = &ast.Ident{Value: p.nodeContent()}
 
-		// Skip '('
 		p.c.GotoNextSibling()
 
-		// Step into 'arguments'
 		p.c.GotoFirstChild()
 		defer p.c.GotoParent()
 
-		for p.c.GotoNextSibling() {
+		for {
 			if p.c.Node().IsNamed() {
 				expr, err := p.expr()
 				if err != nil {
 					return nil, err
 				}
-
 				call.Args = append(call.Args, expr)
+			}
+
+			if !p.c.GotoNextSibling() {
+				break
 			}
 		}
 		return call, nil
@@ -186,31 +288,31 @@ func (p parser) expr() (ast.Expr, error) {
 		}
 		pipe.Arg = arg
 
-		// Skip '|'
+		// Consume '|'
 		p.c.GotoNextSibling()
 
 		p.c.GotoNextSibling()
 		pipe.Func = &ast.Ident{Value: p.nodeContent()}
+
 		return pipe, nil
 
 	case "parenthesized_expression":
 		p.c.GotoFirstChild()
 		defer p.c.GotoParent()
 
-		// Skip '('
+		// Consume '('
 		p.c.GotoNextSibling()
 
 		expr, err := p.expr()
 		if err != nil {
 			return nil, err
 		}
-
 		return &ast.ParenExpr{
 			Expr: expr,
 		}, nil
 
 	default:
-		panic(fmt.Sprintf("parser: unexpected node kind %s", n.Kind()))
+		panic(fmt.Sprintf("parser: unexpected expr kind %s", n.Kind()))
 	}
 }
 

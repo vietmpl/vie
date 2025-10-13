@@ -21,26 +21,58 @@ func newFormatter() *formatter {
 
 func Source(src *ast.SourceFile) []byte {
 	f := newFormatter()
-	f.blocks(src.Blocks)
+	f.stmts(src.Stmts)
 	return f.out
 }
 
-func (f *formatter) blocks(blocks []ast.Block) {
-	for _, b := range blocks {
-		f.block(b)
+func (f *formatter) stmts(stmts []ast.Stmt) {
+	for _, s := range stmts {
+		f.stmt(s)
 	}
 }
 
-func (f *formatter) block(b ast.Block) {
-	switch n := b.(type) {
-	case *ast.TextBlock:
+func (f *formatter) stmt(s ast.Stmt) {
+	switch n := s.(type) {
+	case *ast.Text:
 		f.out = append(f.out, n.Value...)
-	case *ast.RenderBlock:
+
+	case *ast.RenderStmt:
 		f.out = append(f.out, "{{ "...)
 		f.expr(n.Expr)
 		f.out = append(f.out, " }}"...)
+
+	case *ast.IfStmt:
+		f.out = append(f.out, "{% if "...)
+		f.expr(n.Condition)
+		f.out = append(f.out, " %}"...)
+		f.stmts(n.Consequence)
+		f.alt(n.Alternative)
+		f.out = append(f.out, "{% end %}"...)
+
 	default:
-		panic(fmt.Sprintf("format: unexpected block kind %T", b))
+		panic(fmt.Sprintf("format: unexpected stmt type %T", s))
+	}
+}
+
+func (f *formatter) alt(a any) {
+	// Note: won't catch var c *ast.ElseClause = nil
+	if a == nil {
+		return
+	}
+	switch n := a.(type) {
+	case *ast.ElseClause:
+		f.out = append(f.out, "{% else %}"...)
+		f.stmts(n.Consequence)
+
+	case *ast.ElseIfClause:
+		f.out = append(f.out, "{% else if "...)
+		f.expr(n.Condition)
+		f.out = append(f.out, " %}"...)
+		f.stmts(n.Consequence)
+		f.alt(n.Alternative)
+
+	default:
+		panic(fmt.Sprintf("format: unexpected alternative type %T", a))
 	}
 }
 
@@ -88,10 +120,9 @@ func (f *formatter) expr(e ast.Expr) {
 	case *ast.PipeExpr:
 		f.expr(n.Arg)
 		f.out = append(f.out, " | "...)
-		// write Ident
 		f.out = append(f.out, n.Func.Value...)
 
 	default:
-		panic(fmt.Sprintf("format: unexpected expr kind %T", e))
+		panic(fmt.Sprintf("format: unexpected expr type %T", e))
 	}
 }

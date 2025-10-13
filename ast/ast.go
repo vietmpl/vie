@@ -7,10 +7,10 @@ type Node interface {
 	node()
 }
 
-// Block is any top-level block node in the source file.
-type Block interface {
+// Stmt is any top-level block node in the source file.
+type Stmt interface {
 	Node
-	blockNode()
+	stmtNode()
 }
 
 // Expr is any expression node.
@@ -21,55 +21,61 @@ type Expr interface {
 
 // SourceFile represents a complete parsed file.
 type SourceFile struct {
-	Blocks []Block
+	Stmts []Stmt
 }
 
-// Blocks ----------------------------------------
+// Statements ----------------------------------------
 
 type (
-	TextBlock struct {
+	Text struct {
 		Value []byte
 	}
 
-	RenderBlock struct {
+	Comment struct {
+		Value []byte
+	}
+
+	RenderStmt struct {
 		Expr Expr
 	}
 
-	IfBlock struct {
+	IfStmt struct {
 		Condition   Expr
-		Consequence []Block
-		ElseIfs     []ElseIfClause
-		Else        *ElseClause // may be nil
+		Consequence []Stmt
+		// ElseIfClause or ElseClause
+		Alternative any
 	}
 
-	SwitchBlock struct {
+	SwitchStmt struct {
 		Value Expr
 		Cases []CaseClause
 	}
 )
 
-func (*TextBlock) blockNode()   {}
-func (*RenderBlock) blockNode() {}
-func (*IfBlock) blockNode()     {}
-func (*SwitchBlock) blockNode() {}
+func (*Text) stmtNode()       {}
+func (*RenderStmt) stmtNode() {}
+func (*IfStmt) stmtNode()     {}
+func (*SwitchStmt) stmtNode() {}
 
-// Clauses Part of a larger block but does not implement [Block] itself.
+// Clauses Part of a larger statement but does not implement [Stmt] itself.
 type (
-	// ElseIfClause represents an `else if` branch inside an [IfBlock].
+	// ElseIfClause represents an `else if` branch inside an [IfStmt].
 	ElseIfClause struct {
 		Condition   Expr
-		Consequence []Block
+		Consequence []Stmt
+		// ElseIfClause or ElseClause
+		Alternative any
 	}
 
-	// ElseClause represents a final `else` branch inside an [IfBlock].
+	// ElseClause represents a final `else` branch inside an [IfStmt].
 	ElseClause struct {
-		Consequence []Block
+		Consequence []Stmt
 	}
 
-	// CaseClause represents a single `case` branch inside a [SwitchBlock].
+	// CaseClause represents a single `case` branch inside a [SwitchStmt].
 	CaseClause struct {
 		Value Expr
-		Body  []Block
+		Body  []Stmt
 	}
 )
 
@@ -127,14 +133,14 @@ func (*ParenExpr) exprNode()  {}
 func (*CallExpr) exprNode()   {}
 func (*PipeExpr) exprNode()   {}
 
-func (*TextBlock) node()   {}
-func (*RenderBlock) node() {}
-func (*IfBlock) node()     {}
-func (*SwitchBlock) node() {}
-func (*BasicLit) node()    {}
-func (*Ident) node()       {}
-func (*UnaryExpr) node()   {}
-func (*BinaryExpr) node()  {}
-func (*ParenExpr) node()   {}
-func (*CallExpr) node()    {}
-func (*PipeExpr) node()    {}
+func (*Text) node()       {}
+func (*RenderStmt) node() {}
+func (*IfStmt) node()     {}
+func (*SwitchStmt) node() {}
+func (*BasicLit) node()   {}
+func (*Ident) node()      {}
+func (*UnaryExpr) node()  {}
+func (*BinaryExpr) node() {}
+func (*ParenExpr) node()  {}
+func (*CallExpr) node()   {}
+func (*PipeExpr) node()   {}
