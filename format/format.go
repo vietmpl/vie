@@ -98,8 +98,7 @@ func (f *formatter) expr(e ast.Expr) {
 
 	case *ast.UnaryExpr:
 		f.out = append(f.out, n.Op...)
-
-		// Do not insert whitespace after '!'
+		// do not insert whitespace after '!'
 		if n.Op[0] != '!' {
 			f.out = append(f.out, ' ')
 		}
