@@ -280,7 +280,7 @@ func (p parser) expr() (ast.Expr, error) {
 		defer p.GotoParent()
 		unary := &ast.UnaryExpr{}
 
-		unary.Op = p.nodeContent()
+		unary.Op = ast.ParseUnOpKind(string(p.nodeContent()))
 
 		p.GotoNextSibling()
 		expr, err := p.expr()
@@ -303,7 +303,7 @@ func (p parser) expr() (ast.Expr, error) {
 		binary.Left = left
 
 		p.GotoNextSibling()
-		binary.Op = p.nodeContent()
+		binary.Op = ast.ParseBinOpKind(string(p.nodeContent()))
 
 		p.GotoNextSibling()
 		right, err := p.expr()

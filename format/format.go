@@ -97,9 +97,9 @@ func (f *formatter) expr(e ast.Expr) {
 		f.out = append(f.out, n.Value...)
 
 	case *ast.UnaryExpr:
-		f.out = append(f.out, n.Op...)
+		f.out = append(f.out, n.Op.String()...)
 		// do not insert whitespace after '!'
-		if n.Op[0] != '!' {
+		if n.Op != ast.UnOpKindExcl {
 			f.out = append(f.out, ' ')
 		}
 		f.expr(n.Expr)
@@ -107,7 +107,7 @@ func (f *formatter) expr(e ast.Expr) {
 	case *ast.BinaryExpr:
 		f.expr(n.Left)
 		f.out = append(f.out, ' ')
-		f.out = append(f.out, n.Op...)
+		f.out = append(f.out, n.Op.String()...)
 		f.out = append(f.out, ' ')
 		f.expr(n.Right)
 

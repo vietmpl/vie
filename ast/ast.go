@@ -81,8 +81,7 @@ type (
 
 // Expressions -----------------------------------
 
-// BasicLitKind enumerates the possible types of a BasicLit.
-type BasicLitKind int
+type BasicLitKind uint8
 
 const (
 	KindBool BasicLitKind = iota
@@ -100,13 +99,13 @@ type (
 	}
 
 	UnaryExpr struct {
-		Op   []byte
+		Op   UnOpKind
 		Expr Expr
 	}
 
 	BinaryExpr struct {
 		Left  Expr
-		Op    []byte
+		Op    BinOpKind
 		Right Expr
 	}
 
@@ -115,7 +114,7 @@ type (
 	}
 
 	CallExpr struct {
-		Func Expr
+		Func *Ident
 		Args []Expr
 	}
 
