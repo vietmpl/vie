@@ -51,13 +51,13 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 		case *ast.Text:
 
 		case *ast.RenderStmt:
-			a.expr(n.Expr, TypeString)
+			a.expr(n.X, TypeString)
 
 		case *ast.IfStmt:
-			a.expr(n.Condition, TypeBool)
-			a.stmts(n.Consequence)
-			if n.Alternative != nil {
-				a.alt(n.Alternative)
+			a.expr(n.Cond, TypeBool)
+			a.stmts(n.Cons)
+			if n.Alt != nil {
+				a.alt(n.Alt)
 			}
 
 		case *ast.SwitchStmt:
@@ -71,13 +71,13 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 func (a *analyzer) alt(alt any) {
 	switch n := alt.(type) {
 	case *ast.ElseClause:
-		a.stmts(n.Consequence)
+		a.stmts(n.Cons)
 
 	case *ast.ElseIfClause:
-		a.expr(n.Condition, TypeBool)
-		a.stmts(n.Consequence)
-		if n.Alternative != nil {
-			a.alt(n.Alternative)
+		a.expr(n.Cond, TypeBool)
+		a.stmts(n.Cons)
+		if n.Alt != nil {
+			a.alt(n.Alt)
 		}
 
 	default:
@@ -102,21 +102,22 @@ func (a *analyzer) expr(e ast.Expr, typ Type) {
 			a.diagnostics = append(a.diagnostics, &WrongUsage{
 				ExpectedType: typ,
 				GotType:      got,
+				_Pos:         n.Pos(),
 			})
 		}
 
 	case *ast.Ident:
-		a.addType(string(n.Value), typ)
+		a.addType(string(n.Name), typ)
 
 	case *ast.UnaryExpr:
 		// The '!' and 'not' operators can only be applied to boolean values
-		a.expr(n.Expr, TypeBool)
+		a.expr(n.X, TypeBool)
 
 	case *ast.BinaryExpr:
 		switch n.Op {
 		case ast.BinOpKindConcat:
-			a.expr(n.Left, TypeString)
-			a.expr(n.Right, TypeString)
+			a.expr(n.X, TypeString)
+			a.expr(n.Y, TypeString)
 		case
 			ast.BinOpKindEq,
 			ast.BinOpKindNeq,
@@ -131,12 +132,12 @@ func (a *analyzer) expr(e ast.Expr, typ Type) {
 			ast.BinOpKindLOr,
 			ast.BinOpKindAnd,
 			ast.BinOpKindOr:
-			a.expr(n.Left, TypeBool)
-			a.expr(n.Right, TypeBool)
+			a.expr(n.X, TypeBool)
+			a.expr(n.Y, TypeBool)
 		}
 
 	case *ast.ParenExpr:
-		a.expr(n.Expr, typ)
+		a.expr(n.X, typ)
 
 	case *ast.CallExpr:
 	case *ast.PipeExpr:

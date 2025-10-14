@@ -1,10 +1,16 @@
 package ast
 
+type Pos struct {
+	Line      uint // line position in a document (zero-based)
+	Character uint // character offset on a line in a document (zero-based)
+}
+
 // Interfaces ------------------------------------
 
 // Node is the base interface implemented by all AST nodes.
 type Node interface {
 	node()
+	// TODO: implement Pos().
 }
 
 // Stmt is any top-level block node in the source file.
@@ -16,7 +22,9 @@ type Stmt interface {
 // Expr is any expression node.
 type Expr interface {
 	Node
+	Pos() Pos // position of first character belonging to the expression
 	exprNode()
+	// TODO: add End().
 }
 
 // SourceFile represents a complete parsed file.
@@ -32,18 +40,18 @@ type (
 	}
 
 	Comment struct {
-		Value []byte
+		Content []byte
 	}
 
 	RenderStmt struct {
-		Expr Expr
+		X Expr // expression
 	}
 
 	IfStmt struct {
-		Condition   Expr
-		Consequence []Stmt
+		Cond Expr
+		Cons []Stmt
 		// ElseIfClause or ElseClause
-		Alternative any
+		Alt any
 	}
 
 	SwitchStmt struct {
@@ -61,15 +69,15 @@ func (*SwitchStmt) stmtNode() {}
 type (
 	// ElseIfClause represents an `else if` branch inside an [IfStmt].
 	ElseIfClause struct {
-		Condition   Expr
-		Consequence []Stmt
+		Cond Expr
+		Cons []Stmt
 		// ElseIfClause or ElseClause
-		Alternative any
+		Alt any
 	}
 
 	// ElseClause represents a final `else` branch inside an [IfStmt].
 	ElseClause struct {
-		Consequence []Stmt
+		Cons []Stmt
 	}
 
 	// CaseClause represents a single `case` branch inside a [SwitchStmt].
@@ -90,32 +98,36 @@ const (
 
 type (
 	BasicLit struct {
-		Kind  BasicLitKind
-		Value []byte
+		ValuePos Pos
+		Kind     BasicLitKind
+		Value    []byte
 	}
 
 	Ident struct {
-		Value []byte
+		NamePos Pos    // identifier position
+		Name    []byte // identifier name
 	}
 
 	UnaryExpr struct {
-		Op   UnOpKind
-		Expr Expr
+		OpPos Pos      // position of Op
+		Op    UnOpKind // operator
+		X     Expr     // operand
 	}
 
 	BinaryExpr struct {
-		Left  Expr
-		Op    BinOpKind
-		Right Expr
+		X  Expr      // left operand
+		Op BinOpKind // operator
+		Y  Expr      // right operand
 	}
 
 	ParenExpr struct {
-		Expr Expr
+		Lparen Pos  // position of "("
+		X      Expr // parenthesized expression
 	}
 
 	CallExpr struct {
-		Func *Ident
-		Args []Expr
+		Fn   *Ident // function name
+		Args []Expr // function arguments
 	}
 
 	PipeExpr struct {
@@ -131,6 +143,14 @@ func (*BinaryExpr) exprNode() {}
 func (*ParenExpr) exprNode()  {}
 func (*CallExpr) exprNode()   {}
 func (*PipeExpr) exprNode()   {}
+
+func (s *BasicLit) Pos() Pos   { return s.ValuePos }
+func (s *Ident) Pos() Pos      { return s.NamePos }
+func (s *UnaryExpr) Pos() Pos  { return s.OpPos }
+func (s *BinaryExpr) Pos() Pos { return s.X.Pos() }
+func (s *ParenExpr) Pos() Pos  { return s.Lparen }
+func (s *CallExpr) Pos() Pos   { return s.Fn.Pos() }
+func (s *PipeExpr) Pos() Pos   { return s.Arg.Pos() }
 
 func (*Text) node()       {}
 func (*RenderStmt) node() {}

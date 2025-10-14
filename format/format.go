@@ -38,15 +38,15 @@ func (f *formatter) stmt(s ast.Stmt) {
 
 	case *ast.RenderStmt:
 		f.out = append(f.out, "{{ "...)
-		f.expr(n.Expr)
+		f.expr(n.X)
 		f.out = append(f.out, " }}"...)
 
 	case *ast.IfStmt:
 		f.out = append(f.out, "{% if "...)
-		f.expr(n.Condition)
+		f.expr(n.Cond)
 		f.out = append(f.out, " %}"...)
-		f.stmts(n.Consequence)
-		f.alt(n.Alternative)
+		f.stmts(n.Cons)
+		f.alt(n.Alt)
 		f.out = append(f.out, "{% end %}"...)
 
 	case *ast.SwitchStmt:
@@ -74,14 +74,14 @@ func (f *formatter) alt(a any) {
 	switch n := a.(type) {
 	case *ast.ElseClause:
 		f.out = append(f.out, "{% else %}"...)
-		f.stmts(n.Consequence)
+		f.stmts(n.Cons)
 
 	case *ast.ElseIfClause:
 		f.out = append(f.out, "{% else if "...)
-		f.expr(n.Condition)
+		f.expr(n.Cond)
 		f.out = append(f.out, " %}"...)
-		f.stmts(n.Consequence)
-		f.alt(n.Alternative)
+		f.stmts(n.Cons)
+		f.alt(n.Alt)
 
 	default:
 		panic(fmt.Sprintf("format: unexpected alternative type %T", a))
@@ -94,7 +94,7 @@ func (f *formatter) expr(e ast.Expr) {
 		f.out = append(f.out, n.Value...)
 
 	case *ast.Ident:
-		f.out = append(f.out, n.Value...)
+		f.out = append(f.out, n.Name...)
 
 	case *ast.UnaryExpr:
 		f.out = append(f.out, n.Op.String()...)
@@ -102,22 +102,22 @@ func (f *formatter) expr(e ast.Expr) {
 		if n.Op != ast.UnOpKindExcl {
 			f.out = append(f.out, ' ')
 		}
-		f.expr(n.Expr)
+		f.expr(n.X)
 
 	case *ast.BinaryExpr:
-		f.expr(n.Left)
+		f.expr(n.X)
 		f.out = append(f.out, ' ')
 		f.out = append(f.out, n.Op.String()...)
 		f.out = append(f.out, ' ')
-		f.expr(n.Right)
+		f.expr(n.Y)
 
 	case *ast.ParenExpr:
 		f.out = append(f.out, '(')
-		f.expr(n.Expr)
+		f.expr(n.X)
 		f.out = append(f.out, ')')
 
 	case *ast.CallExpr:
-		f.expr(n.Func)
+		f.expr(n.Fn)
 		f.out = append(f.out, '(')
 		if len(n.Args) > 0 {
 			f.expr(n.Args[0])
@@ -131,7 +131,7 @@ func (f *formatter) expr(e ast.Expr) {
 	case *ast.PipeExpr:
 		f.expr(n.Arg)
 		f.out = append(f.out, " | "...)
-		f.out = append(f.out, n.Func.Value...)
+		f.out = append(f.out, n.Func.Name...)
 
 	default:
 		panic(fmt.Sprintf("format: unexpected expr type %T", e))

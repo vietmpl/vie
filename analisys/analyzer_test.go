@@ -1,12 +1,12 @@
-package analisys_test
+package analisys
 
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"testing"
 
-	"github.com/vietmpl/vie/analisys"
+	"github.com/stretchr/testify/assert"
+	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/parser"
 )
 
@@ -16,34 +16,46 @@ func TestTypes(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	cases := map[string]struct {
-		types       map[string]analisys.Type
-		diagnostics []analisys.Diagnostic
-	}{
+	type tc struct {
+		types       map[string]Type
+		diagnostics []Diagnostic
+	}
+
+	cases := map[string]tc{
 		"render": {
-			types: map[string]analisys.Type{
-				"name": analisys.TypeString,
-				"a":    analisys.TypeString,
-				"b":    analisys.TypeString,
+			types: map[string]Type{
+				"name": TypeString,
+				"a":    TypeString,
+				"b":    TypeString,
+			},
+			diagnostics: []Diagnostic{
+				&WrongUsage{
+					ExpectedType: TypeString,
+					GotType:      TypeBool,
+					_Pos: ast.Pos{
+						Line:      3,
+						Character: 3,
+					},
+				},
 			},
 		},
 		"if": {
-			types: map[string]analisys.Type{
-				"a1": analisys.TypeBool,
-				"a2": analisys.TypeBool,
-				"b2": analisys.TypeBool,
-				"c2": analisys.TypeBool,
+			types: map[string]Type{
+				"a1": TypeBool,
+				"a2": TypeBool,
+				"b2": TypeBool,
+				"c2": TypeBool,
 			},
 		},
 		"binary": {
-			types: map[string]analisys.Type{
-				"a": analisys.TypeBool,
-				"b": analisys.TypeBool,
-				"c": analisys.TypeBool,
-				"d": analisys.TypeBool,
-				"e": analisys.TypeBool,
-				"f": analisys.TypeBool,
-				"g": analisys.TypeBool,
+			types: map[string]Type{
+				"a": TypeBool,
+				"b": TypeBool,
+				"c": TypeBool,
+				"d": TypeBool,
+				"e": TypeBool,
+				"f": TypeBool,
+				"g": TypeBool,
 			},
 		},
 	}
@@ -64,16 +76,15 @@ func TestTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			gotTypes, gotDiagnostics := analisys.Source(sourceFile)
+			gotTypes, gotDiagnostics := Source(sourceFile)
 
+			got := tc{
+				types:       gotTypes,
+				diagnostics: gotDiagnostics,
+			}
 			want := cases[name]
 
-			if !reflect.DeepEqual(gotTypes, want.types) {
-				t.Errorf("mismatch for %s\n--- got\n%v\n--- want\n%v", name, gotTypes, want.types)
-			}
-			if !reflect.DeepEqual(gotDiagnostics, want.diagnostics) {
-				t.Errorf("mismatch for %s\n--- got\n%v\n--- want\n%v", name, gotDiagnostics, want.diagnostics)
-			}
+			assert.Equal(t, got, want)
 		})
 	}
 }

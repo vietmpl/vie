@@ -64,7 +64,7 @@ func (p parser) stmt() (ast.Stmt, error) {
 	switch n.Kind() {
 	case "text":
 		return &ast.Text{
-			Value: p.nodeContent(),
+			Value: p.nodeContent(p.Node()),
 		}, nil
 
 	case "render_statement":
@@ -79,7 +79,7 @@ func (p parser) stmt() (ast.Stmt, error) {
 			return nil, err
 		}
 		return &ast.RenderStmt{
-			Expr: expr,
+			X: expr,
 		}, nil
 
 	case "if_statement":
@@ -96,7 +96,7 @@ func (p parser) stmt() (ast.Stmt, error) {
 		if err != nil {
 			return nil, err
 		}
-		ifStmt.Condition = cond
+		ifStmt.Cond = cond
 		p.GotoNextSibling()
 
 		// Consume '%}'
@@ -107,7 +107,7 @@ func (p parser) stmt() (ast.Stmt, error) {
 			if err != nil {
 				return nil, err
 			}
-			ifStmt.Consequence = consequence
+			ifStmt.Cons = consequence
 			p.GotoNextSibling()
 		}
 
@@ -116,7 +116,7 @@ func (p parser) stmt() (ast.Stmt, error) {
 			if err != nil {
 				return nil, err
 			}
-			ifStmt.Alternative = alt
+			ifStmt.Alt = alt
 		}
 		return ifStmt, nil
 
@@ -207,7 +207,7 @@ func (p parser) alt() (any, error) {
 		if err != nil {
 			return nil, err
 		}
-		elseIf.Condition = cond
+		elseIf.Cond = cond
 		p.GotoNextSibling()
 
 		// Consume '%}'
@@ -218,7 +218,7 @@ func (p parser) alt() (any, error) {
 			if err != nil {
 				return nil, err
 			}
-			elseIf.Consequence = consequence
+			elseIf.Cons = consequence
 		}
 
 		if p.GotoNextSibling() {
@@ -226,7 +226,7 @@ func (p parser) alt() (any, error) {
 			if err != nil {
 				return nil, err
 			}
-			elseIf.Alternative = alt
+			elseIf.Alt = alt
 		}
 
 		return elseIf, nil
@@ -249,7 +249,7 @@ func (p parser) alt() (any, error) {
 			return nil, err
 		}
 		return &ast.ElseClause{
-			Consequence: consequence,
+			Cons: consequence,
 		}, nil
 
 	default:
@@ -262,32 +262,39 @@ func (p parser) expr() (ast.Expr, error) {
 	switch n.Kind() {
 	case "string_literal":
 		return &ast.BasicLit{
-			Kind:  ast.KindString,
-			Value: p.nodeContent(),
+			ValuePos: fromTsPoint(n.StartPosition()),
+			Kind:     ast.KindString,
+			Value:    p.nodeContent(p.Node()),
 		}, nil
 
 	case "boolean_literal":
 		return &ast.BasicLit{
-			Kind:  ast.KindBool,
-			Value: p.nodeContent(),
+			ValuePos: fromTsPoint(n.StartPosition()),
+			Kind:     ast.KindBool,
+			Value:    p.nodeContent(p.Node()),
 		}, nil
 
 	case "identifier":
-		return &ast.Ident{Value: p.nodeContent()}, nil
+		return &ast.Ident{
+			NamePos: fromTsPoint(n.StartPosition()),
+			Name:    p.nodeContent(p.Node()),
+		}, nil
 
 	case "unary_expression":
 		p.GotoFirstChild()
 		defer p.GotoParent()
 		unary := &ast.UnaryExpr{}
 
-		unary.Op = ast.ParseUnOpKind(string(p.nodeContent()))
+		n := p.Node()
+		unary.OpPos = fromTsPoint(n.StartPosition())
+		unary.Op = ast.ParseUnOpKind(string(p.src[n.StartByte():n.EndByte()]))
 
 		p.GotoNextSibling()
 		expr, err := p.expr()
 		if err != nil {
 			return nil, err
 		}
-		unary.Expr = expr
+		unary.X = expr
 
 		return unary, nil
 
@@ -300,17 +307,17 @@ func (p parser) expr() (ast.Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		binary.Left = left
+		binary.X = left
 
 		p.GotoNextSibling()
-		binary.Op = ast.ParseBinOpKind(string(p.nodeContent()))
+		binary.Op = ast.ParseBinOpKind(string(p.nodeContent(p.Node())))
 
 		p.GotoNextSibling()
 		right, err := p.expr()
 		if err != nil {
 			return nil, err
 		}
-		binary.Right = right
+		binary.Y = right
 
 		return binary, nil
 
@@ -319,7 +326,11 @@ func (p parser) expr() (ast.Expr, error) {
 		defer p.GotoParent()
 		call := &ast.CallExpr{}
 
-		call.Func = &ast.Ident{Value: p.nodeContent()}
+		n := p.Node()
+		call.Fn = &ast.Ident{
+			NamePos: fromTsPoint(n.StartPosition()),
+			Name:    p.nodeContent(n),
+		}
 
 		p.GotoNextSibling()
 
@@ -356,13 +367,16 @@ func (p parser) expr() (ast.Expr, error) {
 		p.GotoNextSibling()
 
 		p.GotoNextSibling()
-		pipe.Func = &ast.Ident{Value: p.nodeContent()}
+		pipe.Func = &ast.Ident{Name: p.nodeContent(p.Node())}
 
 		return pipe, nil
 
 	case "parenthesized_expression":
 		p.GotoFirstChild()
 		defer p.GotoParent()
+		paren := &ast.ParenExpr{
+			Lparen: fromTsPoint(p.Node().StartPosition()),
+		}
 
 		// Consume '('
 		p.GotoNextSibling()
@@ -371,16 +385,21 @@ func (p parser) expr() (ast.Expr, error) {
 		if err != nil {
 			return nil, err
 		}
-		return &ast.ParenExpr{
-			Expr: expr,
-		}, nil
+		paren.X = expr
+		return paren, nil
 
 	default:
 		panic(fmt.Sprintf("parser: unexpected expr kind %s", n.Kind()))
 	}
 }
 
-func (p parser) nodeContent() []byte {
-	n := p.Node()
+func (p parser) nodeContent(n *ts.Node) []byte {
 	return p.src[n.StartByte():n.EndByte()]
+}
+
+func fromTsPoint(p ts.Point) ast.Pos {
+	return ast.Pos{
+		Line:      p.Row,
+		Character: p.Column,
+	}
 }
