@@ -168,11 +168,11 @@ func (p parser) caseClause() (*ast.CaseClause, error) {
 	// Consume 'case'
 	p.GotoNextSibling()
 
-	val, err := p.expr()
+	list, err := p.exprList()
 	if err != nil {
 		return nil, err
 	}
-	caseClause.Value = val
+	caseClause.List = list
 	p.GotoNextSibling()
 
 	// Consume '%}'
@@ -331,25 +331,13 @@ func (p parser) expr() (ast.Expr, error) {
 			NamePos: fromTsPoint(n.StartPosition()),
 			Name:    p.nodeContent(n),
 		}
-
 		p.GotoNextSibling()
 
-		p.GotoFirstChild()
-		defer p.GotoParent()
-
-		for {
-			if p.Node().IsNamed() {
-				expr, err := p.expr()
-				if err != nil {
-					return nil, err
-				}
-				call.Args = append(call.Args, expr)
-			}
-
-			if !p.GotoNextSibling() {
-				break
-			}
+		args, err := p.exprList()
+		if err != nil {
+			return nil, err
 		}
+		call.Args = args
 		return call, nil
 
 	case "pipe_expression":
@@ -391,6 +379,27 @@ func (p parser) expr() (ast.Expr, error) {
 	default:
 		panic(fmt.Sprintf("parser: unexpected expr kind %s", n.Kind()))
 	}
+}
+
+func (p parser) exprList() ([]ast.Expr, error) {
+	p.GotoFirstChild()
+	defer p.GotoParent()
+
+	var l []ast.Expr
+	for {
+		if p.Node().IsNamed() {
+			expr, err := p.expr()
+			if err != nil {
+				return nil, err
+			}
+			l = append(l, expr)
+		}
+
+		if !p.GotoNextSibling() {
+			break
+		}
+	}
+	return l, nil
 }
 
 func (p parser) nodeContent(n *ts.Node) []byte {

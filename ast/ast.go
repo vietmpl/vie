@@ -82,8 +82,8 @@ type (
 
 	// CaseClause represents a single `case` branch inside a [SwitchStmt].
 	CaseClause struct {
-		Value Expr
-		Body  []Stmt
+		List []Expr
+		Body []Stmt
 	}
 )
 

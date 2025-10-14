@@ -55,7 +55,7 @@ func (f *formatter) stmt(s ast.Stmt) {
 		f.out = append(f.out, " %}\n"...)
 		for _, c := range n.Cases {
 			f.out = append(f.out, "{% case "...)
-			f.expr(c.Value)
+			f.exprList(c.List)
 			f.out = append(f.out, " %}"...)
 			f.stmts(c.Body)
 		}
@@ -119,13 +119,7 @@ func (f *formatter) expr(e ast.Expr) {
 	case *ast.CallExpr:
 		f.expr(n.Fn)
 		f.out = append(f.out, '(')
-		if len(n.Args) > 0 {
-			f.expr(n.Args[0])
-		}
-		for i := 1; i < len(n.Args); i++ {
-			f.out = append(f.out, ", "...)
-			f.expr(n.Args[i])
-		}
+		f.exprList(n.Args)
 		f.out = append(f.out, ')')
 
 	case *ast.PipeExpr:
@@ -135,5 +129,15 @@ func (f *formatter) expr(e ast.Expr) {
 
 	default:
 		panic(fmt.Sprintf("format: unexpected expr type %T", e))
+	}
+}
+
+func (f *formatter) exprList(l []ast.Expr) {
+	if len(l) > 0 {
+		f.expr(l[0])
+	}
+	for i := 1; i < len(l); i++ {
+		f.out = append(f.out, ", "...)
+		f.expr(l[i])
 	}
 }

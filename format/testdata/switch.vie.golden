@@ -14,3 +14,10 @@ Text
 {% case b %}
 Text
 {% end %}
+
+{% switch key %}
+{% case a, b %}
+Text
+{% case a, b, c %}
+Text
+{% end %}

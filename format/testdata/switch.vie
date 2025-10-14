@@ -1,15 +1,22 @@
 {% switch key %}{% end %}
 
-{% switch key %}
-{% end %}
+{%  switch  key  %}
+{%   end   %}
 
-{% switch key %}
-{% case a %}
-{% end %}
+{%switch key%}
+{%case a%}
+{%end%}
 
 {% switch key %}
 {% case a %}
 Text
-{% case b %}
+{%case b%}
+Text
+{% end %}
+
+{% switch key %}
+{% case a,b%}
+Text
+{% case a,b,c, %}
 Text
 {% end %}
