@@ -74,12 +74,12 @@ func (p parser) stmt() (ast.Stmt, error) {
 		// Consume '{{'
 		p.GotoNextSibling()
 
-		expr, err := p.expr()
+		x, err := p.expr()
 		if err != nil {
 			return nil, err
 		}
 		return &ast.RenderStmt{
-			X: expr,
+			X: x,
 		}, nil
 
 	case "if_statement":
@@ -103,11 +103,11 @@ func (p parser) stmt() (ast.Stmt, error) {
 		p.GotoNextSibling()
 
 		if p.FieldName() == "consequence" {
-			consequence, err := p.stmts()
+			cons, err := p.stmts()
 			if err != nil {
 				return nil, err
 			}
-			ifStmt.Cons = consequence
+			ifStmt.Cons = cons
 			p.GotoNextSibling()
 		}
 
@@ -214,11 +214,11 @@ func (p parser) alt() (any, error) {
 		p.GotoNextSibling()
 
 		if p.FieldName() == "consequence" {
-			consequence, err := p.stmts()
+			cons, err := p.stmts()
 			if err != nil {
 				return nil, err
 			}
-			elseIf.Cons = consequence
+			elseIf.Cons = cons
 		}
 
 		if p.GotoNextSibling() {
@@ -244,12 +244,12 @@ func (p parser) alt() (any, error) {
 			return &ast.ElseClause{}, nil
 		}
 
-		consequence, err := p.stmts()
+		cons, err := p.stmts()
 		if err != nil {
 			return nil, err
 		}
 		return &ast.ElseClause{
-			Cons: consequence,
+			Cons: cons,
 		}, nil
 
 	default:
@@ -287,14 +287,14 @@ func (p parser) expr() (ast.Expr, error) {
 
 		n := p.Node()
 		unary.OpPos = fromTsPoint(n.StartPosition())
-		unary.Op = ast.ParseUnOpKind(string(p.src[n.StartByte():n.EndByte()]))
+		unary.Op = ast.ParseUnOpKind(string(p.nodeContent(n)))
 
 		p.GotoNextSibling()
-		expr, err := p.expr()
+		x, err := p.expr()
 		if err != nil {
 			return nil, err
 		}
-		unary.X = expr
+		unary.X = x
 
 		return unary, nil
 
@@ -303,21 +303,21 @@ func (p parser) expr() (ast.Expr, error) {
 		defer p.GotoParent()
 		binary := &ast.BinaryExpr{}
 
-		left, err := p.expr()
+		x, err := p.expr()
 		if err != nil {
 			return nil, err
 		}
-		binary.X = left
+		binary.X = x
 
 		p.GotoNextSibling()
 		binary.Op = ast.ParseBinOpKind(string(p.nodeContent(p.Node())))
 
 		p.GotoNextSibling()
-		right, err := p.expr()
+		y, err := p.expr()
 		if err != nil {
 			return nil, err
 		}
-		binary.Y = right
+		binary.Y = y
 
 		return binary, nil
 
@@ -369,11 +369,11 @@ func (p parser) expr() (ast.Expr, error) {
 		// Consume '('
 		p.GotoNextSibling()
 
-		expr, err := p.expr()
+		x, err := p.expr()
 		if err != nil {
 			return nil, err
 		}
-		paren.X = expr
+		paren.X = x
 		return paren, nil
 
 	default:
@@ -385,21 +385,21 @@ func (p parser) exprList() ([]ast.Expr, error) {
 	p.GotoFirstChild()
 	defer p.GotoParent()
 
-	var l []ast.Expr
+	var list []ast.Expr
 	for {
 		if p.Node().IsNamed() {
 			expr, err := p.expr()
 			if err != nil {
 				return nil, err
 			}
-			l = append(l, expr)
+			list = append(list, expr)
 		}
 
 		if !p.GotoNextSibling() {
 			break
 		}
 	}
-	return l, nil
+	return list, nil
 }
 
 func (p parser) nodeContent(n *ts.Node) []byte {
