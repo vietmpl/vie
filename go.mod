@@ -7,16 +7,16 @@ require (
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tree-sitter/go-tree-sitter v0.25.0
-	github.com/vietmpl/tree-sitter-vie v0.0.0-20251014160039-9593473ab624
+	github.com/vietmpl/tree-sitter-vie v0.1.2
 )
 
 require (
 	github.com/charmbracelet/colorprofile v0.3.2 // indirect
 	github.com/charmbracelet/lipgloss/v2 v2.0.0-beta.3.0.20250917201909-41ff0bf215ea // indirect
-	github.com/charmbracelet/ultraviolet v0.0.0-20251013101141-047c1131b4f7 // indirect
+	github.com/charmbracelet/ultraviolet v0.0.0-20251016194142-04c17e17f273 // indirect
 	github.com/charmbracelet/x/ansi v0.10.2 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13 // indirect
-	github.com/charmbracelet/x/exp/charmtone v0.0.0-20251013190359-01371c2be815 // indirect
+	github.com/charmbracelet/x/exp/charmtone v0.0.0-20251016201629-54e687c87a08 // indirect
 	github.com/charmbracelet/x/exp/color v0.0.0-20251006100439-2151805163c8 // indirect
 	github.com/charmbracelet/x/term v0.2.1 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
