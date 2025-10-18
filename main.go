@@ -54,8 +54,8 @@ func formatCmd() *cobra.Command {
 				return err
 			}
 
-			sourceFile, err := parser.ParseFile(src)
-			res := format.Source(sourceFile)
+			sf := parser.ParseFile(src)
+			res := format.Source(sf)
 			fmt.Fprint(cmd.OutOrStdout(), string(res))
 			return nil
 		},
@@ -75,8 +75,8 @@ func contextCmd() *cobra.Command {
 				return err
 			}
 
-			sourceFile, err := parser.ParseFile(src)
-			tm, diagnostics := analisys.Source(sourceFile)
+			sf := parser.ParseFile(src)
+			tm, diagnostics := analisys.Source(sf)
 			if len(diagnostics) != 0 {
 				fmt.Fprintf(cmd.OutOrStdout(), "%v\n", diagnostics)
 			}

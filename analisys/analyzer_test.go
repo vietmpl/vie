@@ -71,12 +71,9 @@ func TestTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			sourceFile, err := parser.ParseFile(input)
-			if err != nil {
-				t.Fatal(err)
-			}
+			sf := parser.ParseFile(input)
 
-			gotTypes, gotDiagnostics := Source(sourceFile)
+			gotTypes, gotDiagnostics := Source(sf)
 
 			got := tc{
 				types:       gotTypes,

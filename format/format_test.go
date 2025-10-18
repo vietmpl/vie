@@ -32,12 +32,9 @@ func TestGoldenFiles(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			sourceFile, err := parser.ParseFile(input)
-			if err != nil {
-				t.Fatal(err)
-			}
+			sf := parser.ParseFile(input)
 
-			got := format.Source(sourceFile)
+			got := format.Source(sf)
 
 			want, err := os.ReadFile(goldenPath)
 			if err != nil {
