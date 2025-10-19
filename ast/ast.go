@@ -126,13 +126,13 @@ type (
 	}
 
 	CallExpr struct {
-		Fn   *Ident // function name
+		Fn   Ident  // function name
 		Args []Expr // function arguments
 	}
 
 	PipeExpr struct {
 		Arg  Expr
-		Func *Ident
+		Func Ident
 	}
 )
 

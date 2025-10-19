@@ -58,7 +58,7 @@ func (p parser) stmt() ast.Stmt {
 	switch n.Kind() {
 	case "text":
 		return &ast.Text{
-			Value: p.nodeContent(p.Node()),
+			Value: p.nodeContent(n),
 		}
 
 	case "render_statement":
@@ -75,7 +75,7 @@ func (p parser) stmt() ast.Stmt {
 	case "if_statement":
 		p.GotoFirstChild()
 		defer p.GotoParent()
-		ifStmt := &ast.IfStmt{}
+		var ifStmt ast.IfStmt
 
 		// Consume '{%'
 		p.GotoNextSibling()
@@ -95,12 +95,12 @@ func (p parser) stmt() ast.Stmt {
 		if p.FieldName() == "alternative" {
 			ifStmt.Alt = p.alt()
 		}
-		return ifStmt
+		return &ifStmt
 
 	case "switch_statement":
 		p.GotoFirstChild()
 		defer p.GotoParent()
-		switchStmt := &ast.SwitchStmt{}
+		var switchStmt ast.SwitchStmt
 
 		// Consume '{%'
 		p.GotoNextSibling()
@@ -119,7 +119,7 @@ func (p parser) stmt() ast.Stmt {
 				break
 			}
 		}
-		return switchStmt
+		return &switchStmt
 
 	default:
 		panic(fmt.Sprintf("parser: unexpected stmt kind %s", n.Kind()))
@@ -129,7 +129,7 @@ func (p parser) stmt() ast.Stmt {
 func (p parser) caseClause() *ast.CaseClause {
 	p.GotoFirstChild()
 	defer p.GotoParent()
-	caseClause := &ast.CaseClause{}
+	var caseClause ast.CaseClause
 
 	// Consume '{%'
 	p.GotoNextSibling()
@@ -145,7 +145,7 @@ func (p parser) caseClause() *ast.CaseClause {
 	if p.FieldName() == "body" {
 		caseClause.Body = p.stmts()
 	}
-	return caseClause
+	return &caseClause
 }
 
 func (p parser) alt() any {
@@ -154,7 +154,7 @@ func (p parser) alt() any {
 	case "else_if_clause":
 		p.GotoFirstChild()
 		defer p.GotoParent()
-		elseIf := &ast.ElseIfClause{}
+		var elseIf ast.ElseIfClause
 
 		// Consume '{%'
 		p.GotoNextSibling()
@@ -172,16 +172,15 @@ func (p parser) alt() any {
 		if p.FieldName() == "consequence" {
 			elseIf.Cons = p.stmts()
 		}
-
 		if p.GotoNextSibling() {
 			elseIf.Alt = p.alt()
 		}
-
-		return elseIf
+		return &elseIf
 
 	case "else_clause":
 		p.GotoFirstChild()
 		defer p.GotoParent()
+		var e ast.ElseClause
 
 		// Consume '{%'
 		p.GotoNextSibling()
@@ -189,12 +188,9 @@ func (p parser) alt() any {
 		p.GotoNextSibling()
 		// Consume '%}'
 		if p.GotoNextSibling() {
-			cons := p.stmts()
-			return &ast.ElseClause{
-				Cons: cons,
-			}
+			e.Cons = p.stmts()
 		}
-		return &ast.ElseClause{}
+		return &e
 
 	default:
 		panic(fmt.Sprintf("parser: unexpected alt kind %s", n.Kind()))
@@ -208,26 +204,26 @@ func (p parser) expr() ast.Expr {
 		return &ast.BasicLit{
 			ValuePos: fromTsPoint(n.StartPosition()),
 			Kind:     ast.KindString,
-			Value:    p.nodeContent(p.Node()),
+			Value:    p.nodeContent(n),
 		}
 
 	case "boolean_literal":
 		return &ast.BasicLit{
 			ValuePos: fromTsPoint(n.StartPosition()),
 			Kind:     ast.KindBool,
-			Value:    p.nodeContent(p.Node()),
+			Value:    p.nodeContent(n),
 		}
 
 	case "identifier":
 		return &ast.Ident{
 			NamePos: fromTsPoint(n.StartPosition()),
-			Name:    p.nodeContent(p.Node()),
+			Name:    p.nodeContent(n),
 		}
 
 	case "unary_expression":
 		p.GotoFirstChild()
 		defer p.GotoParent()
-		unary := &ast.UnaryExpr{}
+		var unary ast.UnaryExpr
 
 		n := p.Node()
 		unary.OpPos = fromTsPoint(n.StartPosition())
@@ -236,12 +232,12 @@ func (p parser) expr() ast.Expr {
 		p.GotoNextSibling()
 		unary.X = p.expr()
 
-		return unary
+		return &unary
 
 	case "binary_expression":
 		p.GotoFirstChild()
 		defer p.GotoParent()
-		binary := &ast.BinaryExpr{}
+		var binary ast.BinaryExpr
 
 		binary.X = p.expr()
 
@@ -251,27 +247,27 @@ func (p parser) expr() ast.Expr {
 		p.GotoNextSibling()
 		binary.Y = p.expr()
 
-		return binary
+		return &binary
 
 	case "call_expression":
 		p.GotoFirstChild()
 		defer p.GotoParent()
-		call := &ast.CallExpr{}
+		var call ast.CallExpr
 
 		n := p.Node()
-		call.Fn = &ast.Ident{
+		call.Fn = ast.Ident{
 			NamePos: fromTsPoint(n.StartPosition()),
 			Name:    p.nodeContent(n),
 		}
 		p.GotoNextSibling()
 
 		call.Args = p.exprList()
-		return call
+		return &call
 
 	case "pipe_expression":
 		p.GotoFirstChild()
 		defer p.GotoParent()
-		pipe := &ast.PipeExpr{}
+		var pipe ast.PipeExpr
 
 		pipe.Arg = p.expr()
 
@@ -279,22 +275,21 @@ func (p parser) expr() ast.Expr {
 		p.GotoNextSibling()
 
 		p.GotoNextSibling()
-		pipe.Func = &ast.Ident{Name: p.nodeContent(p.Node())}
+		pipe.Func = ast.Ident{Name: p.nodeContent(p.Node())}
 
-		return pipe
+		return &pipe
 
 	case "parenthesized_expression":
 		p.GotoFirstChild()
 		defer p.GotoParent()
-		paren := &ast.ParenExpr{
-			Lparen: fromTsPoint(p.Node().StartPosition()),
-		}
+		var paren ast.ParenExpr
 
 		// Consume '('
+		paren.Lparen = fromTsPoint(p.Node().StartPosition())
 		p.GotoNextSibling()
 
 		paren.X = p.expr()
-		return paren
+		return &paren
 
 	default:
 		panic(fmt.Sprintf("parser: unexpected expr kind %s", n.Kind()))

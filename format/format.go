@@ -117,7 +117,7 @@ func (f *formatter) expr(e ast.Expr) {
 		f.out = append(f.out, ')')
 
 	case *ast.CallExpr:
-		f.expr(n.Fn)
+		f.expr(&n.Fn)
 		f.out = append(f.out, '(')
 		f.exprList(n.Args)
 		f.out = append(f.out, ')')
