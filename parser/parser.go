@@ -19,7 +19,7 @@ var language = ts.NewLanguage(tree_sitter_vie.Language())
 
 func ParseFile(src []byte) *ast.SourceFile {
 	tsParser := ts.NewParser()
-	tsParser.SetLanguage(language)
+	_ = tsParser.SetLanguage(language)
 	defer tsParser.Close()
 
 	tree := tsParser.Parse(src, nil)
@@ -33,24 +33,18 @@ func ParseFile(src []byte) *ast.SourceFile {
 		src:        src,
 	}
 
-	stmts := p.stmts()
-	return &ast.SourceFile{
-		Stmts: stmts,
-	}
-}
-
-func (p parser) stmts() []ast.Stmt {
 	p.GotoFirstChild()
 	defer p.GotoParent()
-	var stmts []ast.Stmt
+
+	var sf ast.SourceFile
 	for {
 		stmt := p.stmt()
-		stmts = append(stmts, stmt)
+		sf.Stmts = append(sf.Stmts, stmt)
 		if !p.GotoNextSibling() {
 			break
 		}
 	}
-	return stmts
+	return &sf
 }
 
 func (p parser) stmt() ast.Stmt {
@@ -61,139 +55,117 @@ func (p parser) stmt() ast.Stmt {
 			Value: p.nodeContent(n),
 		}
 
-	case "render_statement":
+	case "render":
 		p.GotoFirstChild()
 		defer p.GotoParent()
 
-		// Consume '{{'
-		p.GotoNextSibling()
+		p.GotoNextSibling() // '{{'
 
 		return &ast.RenderStmt{
 			X: p.expr(),
 		}
 
-	case "if_statement":
-		p.GotoFirstChild()
-		defer p.GotoParent()
+	case "if_tag":
 		var ifStmt ast.IfStmt
-
-		// Consume '{%'
-		p.GotoNextSibling()
-		// Consume 'if'
-		p.GotoNextSibling()
-
-		ifStmt.Cond = p.expr()
-		p.GotoNextSibling()
-
-		// Consume '%}'
-		p.GotoNextSibling()
-
-		if p.FieldName() == "consequence" {
-			ifStmt.Cons = p.stmts()
-			p.GotoNextSibling()
-		}
-		if p.FieldName() == "alternative" {
-			ifStmt.Alt = p.alt()
-		}
-		return &ifStmt
-
-	case "switch_statement":
 		p.GotoFirstChild()
-		defer p.GotoParent()
-		var switchStmt ast.SwitchStmt
 
-		// Consume '{%'
-		p.GotoNextSibling()
-		// Consume 'switch'
-		p.GotoNextSibling()
+		p.GotoNextSibling() // '{%'
+		p.GotoNextSibling() // 'if'
+		ifStmt.Cond = p.expr()
+		p.GotoParent()
 
-		switchStmt.Value = p.expr()
-		p.GotoNextSibling()
+		for p.GotoNextSibling() {
+			switch p.Node().Kind() {
+			case "else_if_tag":
+				var elseIf ast.ElseIfClause
+				p.GotoFirstChild()
 
-		// Consume '%}'
-		p.GotoNextSibling()
+				p.GotoNextSibling() // '{%'
+				p.GotoNextSibling() // 'else'
+				p.GotoNextSibling() // 'if'
+				elseIf.Cond = p.expr()
+				p.GotoParent()
 
-		for p.FieldName() == "cases" {
-			switchStmt.Cases = append(switchStmt.Cases, p.caseClause())
-			if !p.GotoNextSibling() {
-				break
+				for p.GotoNextSibling() {
+					kind := p.Node().Kind()
+					if kind == "else_if_tag" || kind == "else_tag" || kind == "end_tag" {
+						p.GotoPreviousSibling()
+						break
+					}
+					elseIf.Cons = append(elseIf.Cons, p.stmt())
+				}
+				ifStmt.ElseIfs = append(ifStmt.ElseIfs, elseIf)
+
+			case "else_tag":
+				var elseClause ast.ElseClause
+				p.GotoFirstChild()
+
+				p.GotoNextSibling() // '{%'
+				p.GotoNextSibling() // 'else'
+				p.GotoParent()
+
+				for p.GotoNextSibling() {
+					if p.Node().Kind() == "end_tag" {
+						p.GotoPreviousSibling()
+						break
+					}
+					elseClause.Cons = append(elseClause.Cons, p.stmt())
+				}
+				ifStmt.Else = &elseClause
+
+			case "end_tag":
+				return &ifStmt
+
+			default:
+				ifStmt.Cons = append(ifStmt.Cons, p.stmt())
 			}
 		}
-		return &switchStmt
+		panic("parser: unexpected EOF when parsing if_tag")
+
+	case "switch_tag":
+		var switchStmt ast.SwitchStmt
+		p.GotoFirstChild()
+
+		p.GotoNextSibling() // '{%'
+		p.GotoNextSibling() // 'switch'
+		switchStmt.Value = p.expr()
+		p.GotoParent()
+
+		for p.GotoNextSibling() {
+			switch p.Node().Kind() {
+			case "case_tag":
+				var caseClause ast.CaseClause
+				p.GotoFirstChild()
+
+				p.GotoNextSibling() // '{%'
+				p.GotoNextSibling() // 'case'
+				caseClause.List = p.exprList()
+				p.GotoParent()
+
+				for p.GotoNextSibling() {
+					k := p.Node().Kind()
+					if k == "case_tag" || k == "end_tag" {
+						p.GotoPreviousSibling()
+						break
+					}
+					caseClause.Body = append(caseClause.Body, p.stmt())
+				}
+				switchStmt.Cases = append(switchStmt.Cases, caseClause)
+
+			case "end_tag":
+				return &switchStmt
+
+			case "text":
+				// TODO: allow only whitespaces.
+
+			default:
+				panic(fmt.Sprintf("parser: unexpected tag when parsing switch kind %s", p.Node().Kind()))
+			}
+		}
+		panic("parser: unexpected EOF when parsing switch_tag")
 
 	default:
 		panic(fmt.Sprintf("parser: unexpected stmt kind %s", n.Kind()))
-	}
-}
-
-func (p parser) caseClause() *ast.CaseClause {
-	p.GotoFirstChild()
-	defer p.GotoParent()
-	var caseClause ast.CaseClause
-
-	// Consume '{%'
-	p.GotoNextSibling()
-	// Consume 'case'
-	p.GotoNextSibling()
-
-	caseClause.List = p.exprList()
-	p.GotoNextSibling()
-
-	// Consume '%}'
-	p.GotoNextSibling()
-
-	if p.FieldName() == "body" {
-		caseClause.Body = p.stmts()
-	}
-	return &caseClause
-}
-
-func (p parser) alt() any {
-	n := p.Node()
-	switch n.Kind() {
-	case "else_if_clause":
-		p.GotoFirstChild()
-		defer p.GotoParent()
-		var elseIf ast.ElseIfClause
-
-		// Consume '{%'
-		p.GotoNextSibling()
-		// Consume 'else'
-		p.GotoNextSibling()
-		// Consume 'if'
-		p.GotoNextSibling()
-
-		elseIf.Cond = p.expr()
-		p.GotoNextSibling()
-
-		// Consume '%}'
-		p.GotoNextSibling()
-
-		if p.FieldName() == "consequence" {
-			elseIf.Cons = p.stmts()
-		}
-		if p.GotoNextSibling() {
-			elseIf.Alt = p.alt()
-		}
-		return &elseIf
-
-	case "else_clause":
-		p.GotoFirstChild()
-		defer p.GotoParent()
-		var e ast.ElseClause
-
-		// Consume '{%'
-		p.GotoNextSibling()
-		// Consume 'else'
-		p.GotoNextSibling()
-		// Consume '%}'
-		if p.GotoNextSibling() {
-			e.Cons = p.stmts()
-		}
-		return &e
-
-	default:
-		panic(fmt.Sprintf("parser: unexpected alt kind %s", n.Kind()))
 	}
 }
 
@@ -202,21 +174,21 @@ func (p parser) expr() ast.Expr {
 	switch n.Kind() {
 	case "string_literal":
 		return &ast.BasicLit{
-			ValuePos: fromTsPoint(n.StartPosition()),
+			ValuePos: posFromTsPoint(n.StartPosition()),
 			Kind:     ast.KindString,
 			Value:    p.nodeContent(n),
 		}
 
 	case "boolean_literal":
 		return &ast.BasicLit{
-			ValuePos: fromTsPoint(n.StartPosition()),
+			ValuePos: posFromTsPoint(n.StartPosition()),
 			Kind:     ast.KindBool,
 			Value:    p.nodeContent(n),
 		}
 
 	case "identifier":
 		return &ast.Ident{
-			NamePos: fromTsPoint(n.StartPosition()),
+			NamePos: posFromTsPoint(n.StartPosition()),
 			Name:    p.nodeContent(n),
 		}
 
@@ -226,7 +198,7 @@ func (p parser) expr() ast.Expr {
 		var unary ast.UnaryExpr
 
 		n := p.Node()
-		unary.OpPos = fromTsPoint(n.StartPosition())
+		unary.OpPos = posFromTsPoint(n.StartPosition())
 		unary.Op = ast.ParseUnOpKind(string(p.nodeContent(n)))
 
 		p.GotoNextSibling()
@@ -256,7 +228,7 @@ func (p parser) expr() ast.Expr {
 
 		n := p.Node()
 		call.Fn = ast.Ident{
-			NamePos: fromTsPoint(n.StartPosition()),
+			NamePos: posFromTsPoint(n.StartPosition()),
 			Name:    p.nodeContent(n),
 		}
 		p.GotoNextSibling()
@@ -271,8 +243,7 @@ func (p parser) expr() ast.Expr {
 
 		pipe.Arg = p.expr()
 
-		// Consume '|'
-		p.GotoNextSibling()
+		p.GotoNextSibling() // '|'
 
 		p.GotoNextSibling()
 		pipe.Func = ast.Ident{Name: p.nodeContent(p.Node())}
@@ -284,8 +255,7 @@ func (p parser) expr() ast.Expr {
 		defer p.GotoParent()
 		var paren ast.ParenExpr
 
-		// Consume '('
-		paren.Lparen = fromTsPoint(p.Node().StartPosition())
+		paren.Lparen = posFromTsPoint(p.Node().StartPosition())
 		p.GotoNextSibling()
 
 		paren.X = p.expr()
@@ -316,7 +286,7 @@ func (p parser) nodeContent(n *ts.Node) []byte {
 	return p.src[n.StartByte():n.EndByte()]
 }
 
-func fromTsPoint(p ts.Point) ast.Pos {
+func posFromTsPoint(p ts.Point) ast.Pos {
 	return ast.Pos{
 		Line:      p.Row,
 		Character: p.Column,

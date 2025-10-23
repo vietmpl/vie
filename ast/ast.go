@@ -48,15 +48,15 @@ type (
 	}
 
 	IfStmt struct {
-		Cond Expr
-		Cons []Stmt
-		// ElseIfClause or ElseClause
-		Alt any
+		Cond    Expr
+		Cons    []Stmt
+		ElseIfs []ElseIfClause
+		Else    *ElseClause
 	}
 
 	SwitchStmt struct {
 		Value Expr
-		Cases []*CaseClause
+		Cases []CaseClause
 	}
 )
 
@@ -71,8 +71,6 @@ type (
 	ElseIfClause struct {
 		Cond Expr
 		Cons []Stmt
-		// ElseIfClause or ElseClause
-		Alt any
 	}
 
 	// ElseClause represents a final `else` branch inside an [IfStmt].

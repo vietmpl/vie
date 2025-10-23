@@ -56,8 +56,12 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 		case *ast.IfStmt:
 			a.expr(n.Cond, TypeBool)
 			a.stmts(n.Cons)
-			if n.Alt != nil {
-				a.alt(n.Alt)
+			for _, elseIfClause := range n.ElseIfs {
+				a.expr(elseIfClause.Cond, TypeBool)
+				a.stmts(elseIfClause.Cons)
+			}
+			if n.Else != nil {
+				a.stmts(n.Else.Cons)
 			}
 
 		case *ast.SwitchStmt:
@@ -65,23 +69,6 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 		default:
 			panic(fmt.Sprintf("analyzer: unexpected stmt type %T", s))
 		}
-	}
-}
-
-func (a *analyzer) alt(alt any) {
-	switch n := alt.(type) {
-	case *ast.ElseClause:
-		a.stmts(n.Cons)
-
-	case *ast.ElseIfClause:
-		a.expr(n.Cond, TypeBool)
-		a.stmts(n.Cons)
-		if n.Alt != nil {
-			a.alt(n.Alt)
-		}
-
-	default:
-		panic(fmt.Sprintf("analyzer: unexpected alternative type %T", alt))
 	}
 }
 

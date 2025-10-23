@@ -33,7 +33,7 @@ var binOpStrings = [...]string{
 	"and",
 	"||",
 	"&&",
-	"..",
+	"~",
 }
 
 func (k BinOpKind) String() string {

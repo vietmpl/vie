@@ -46,7 +46,16 @@ func (f *formatter) stmt(s ast.Stmt) {
 		f.expr(n.Cond)
 		f.out = append(f.out, " %}"...)
 		f.stmts(n.Cons)
-		f.alt(n.Alt)
+		for _, elseIfClause := range n.ElseIfs {
+			f.out = append(f.out, "{% else if "...)
+			f.expr(elseIfClause.Cond)
+			f.out = append(f.out, " %}"...)
+			f.stmts(elseIfClause.Cons)
+		}
+		if n.Else != nil {
+			f.out = append(f.out, "{% else %}"...)
+			f.stmts(n.Else.Cons)
+		}
 		f.out = append(f.out, "{% end %}"...)
 
 	case *ast.SwitchStmt:
@@ -63,28 +72,6 @@ func (f *formatter) stmt(s ast.Stmt) {
 
 	default:
 		panic(fmt.Sprintf("format: unexpected stmt type %T", s))
-	}
-}
-
-func (f *formatter) alt(a any) {
-	// Note: won't catch var c *ast.ElseClause = nil
-	if a == nil {
-		return
-	}
-	switch n := a.(type) {
-	case *ast.ElseClause:
-		f.out = append(f.out, "{% else %}"...)
-		f.stmts(n.Cons)
-
-	case *ast.ElseIfClause:
-		f.out = append(f.out, "{% else if "...)
-		f.expr(n.Cond)
-		f.out = append(f.out, " %}"...)
-		f.stmts(n.Cons)
-		f.alt(n.Alt)
-
-	default:
-		panic(fmt.Sprintf("format: unexpected alternative type %T", a))
 	}
 }
 
