@@ -11,6 +11,20 @@ import (
 type renderer struct {
 	c   map[string]value.Value
 	out bytes.Buffer
+
+	afterTag bool
+}
+
+func (r *renderer) truncateTrailSpaces() {
+	data := r.out.Bytes()
+	i := len(data) - 1
+	for i >= 0 && (data[i] == ' ' || data[i] == '\t') {
+		i--
+	}
+	// If we reached start of buffer or the last non-space is a newline, truncate spaces
+	if i < 0 || data[i] == '\n' {
+		r.out.Truncate(i + 1)
+	}
 }
 
 func Source(src *ast.SourceFile, context map[string]value.Value) ([]byte, error) {
@@ -35,6 +49,12 @@ func (r *renderer) stmts(stmts []ast.Stmt) error {
 func (r *renderer) stmt(s ast.Stmt) error {
 	switch n := s.(type) {
 	case *ast.Text:
+		if r.afterTag {
+			if i := bytes.IndexByte(n.Value, '\n'); i != -1 {
+				n.Value = n.Value[i+1:]
+			}
+			r.afterTag = false
+		}
 		r.out.Write(n.Value)
 		return nil
 
@@ -63,7 +83,11 @@ func (r *renderer) stmt(s ast.Stmt) error {
 			return fmt.Errorf("unexpected type in if condition: %T", condVal)
 		}
 
+		// TODO(skewb1k): refactor or document.
+		r.afterTag = true
+
 		if cond {
+			r.truncateTrailSpaces()
 			if err := r.stmts(n.Cons); err != nil {
 				return err
 			}
@@ -79,18 +103,22 @@ func (r *renderer) stmt(s ast.Stmt) error {
 					return fmt.Errorf("unexpected type in else if condition: %T", condVal)
 				}
 				if elseCond {
+					r.truncateTrailSpaces()
 					if err := r.stmts(elseIfClause.Cons); err != nil {
 						return err
 					}
-					return nil
+					break
 				}
 			}
 			if n.Else != nil {
+				r.truncateTrailSpaces()
 				if err := r.stmts(n.Else.Cons); err != nil {
 					return err
 				}
 			}
 		}
+		r.truncateTrailSpaces()
+		r.afterTag = true
 		return nil
 
 	case *ast.SwitchStmt:
