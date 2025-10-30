@@ -1,28 +1,25 @@
 package format
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/vietmpl/vie/ast"
 )
 
 type formatter struct {
-	out   []byte
+	out   bytes.Buffer
 	level uint
 }
 
-func newFormatter() *formatter {
-	return &formatter{
+func Source(src *ast.SourceFile) []byte {
+	f := formatter{
 		// TODO(skewb1k): consider pre-alloc.
-		out:   make([]byte, 0),
+		out:   bytes.Buffer{},
 		level: 0,
 	}
-}
-
-func Source(src *ast.SourceFile) []byte {
-	f := newFormatter()
 	f.stmts(src.Stmts)
-	return f.out
+	return f.out.Bytes()
 }
 
 func (f *formatter) stmts(stmts []ast.Stmt) {
@@ -34,41 +31,41 @@ func (f *formatter) stmts(stmts []ast.Stmt) {
 func (f *formatter) stmt(s ast.Stmt) {
 	switch n := s.(type) {
 	case *ast.Text:
-		f.out = append(f.out, n.Value...)
+		f.out.Write(n.Value)
 
 	case *ast.RenderStmt:
-		f.out = append(f.out, "{{ "...)
+		f.out.WriteString("{{ ")
 		f.expr(n.X)
-		f.out = append(f.out, " }}"...)
+		f.out.WriteString(" }}")
 
 	case *ast.IfStmt:
-		f.out = append(f.out, "{% if "...)
+		f.out.WriteString("{% if ")
 		f.expr(n.Cond)
-		f.out = append(f.out, " %}"...)
+		f.out.WriteString(" %}")
 		f.stmts(n.Cons)
 		for _, elseIfClause := range n.ElseIfs {
-			f.out = append(f.out, "{% else if "...)
+			f.out.WriteString("{% else if ")
 			f.expr(elseIfClause.Cond)
-			f.out = append(f.out, " %}"...)
+			f.out.WriteString(" %}")
 			f.stmts(elseIfClause.Cons)
 		}
 		if n.Else != nil {
-			f.out = append(f.out, "{% else %}"...)
+			f.out.WriteString("{% else %}")
 			f.stmts(n.Else.Cons)
 		}
-		f.out = append(f.out, "{% end %}"...)
+		f.out.WriteString("{% end %}")
 
 	case *ast.SwitchStmt:
-		f.out = append(f.out, "{% switch "...)
+		f.out.WriteString("{% switch ")
 		f.expr(n.Value)
-		f.out = append(f.out, " %}\n"...)
+		f.out.WriteString(" %}\n")
 		for _, c := range n.Cases {
-			f.out = append(f.out, "{% case "...)
+			f.out.WriteString("{% case ")
 			f.exprList(c.List)
-			f.out = append(f.out, " %}"...)
+			f.out.WriteString(" %}")
 			f.stmts(c.Body)
 		}
-		f.out = append(f.out, "{% end %}"...)
+		f.out.WriteString("{% end %}")
 
 	default:
 		panic(fmt.Sprintf("format: unexpected stmt type %T", s))
@@ -78,41 +75,41 @@ func (f *formatter) stmt(s ast.Stmt) {
 func (f *formatter) expr(e ast.Expr) {
 	switch n := e.(type) {
 	case *ast.BasicLit:
-		f.out = append(f.out, n.Value...)
+		f.out.Write(n.Value)
 
 	case *ast.Ident:
-		f.out = append(f.out, n.Name...)
+		f.out.Write(n.Name)
 
 	case *ast.UnaryExpr:
-		f.out = append(f.out, n.Op.String()...)
+		f.out.WriteString(n.Op.String())
 		// do not insert whitespace after '!'
 		if n.Op != ast.UnOpKindExcl {
-			f.out = append(f.out, ' ')
+			f.out.WriteByte(' ')
 		}
 		f.expr(n.X)
 
 	case *ast.BinaryExpr:
 		f.expr(n.X)
-		f.out = append(f.out, ' ')
-		f.out = append(f.out, n.Op.String()...)
-		f.out = append(f.out, ' ')
+		f.out.WriteByte(' ')
+		f.out.WriteString(n.Op.String())
+		f.out.WriteByte(' ')
 		f.expr(n.Y)
 
 	case *ast.ParenExpr:
-		f.out = append(f.out, '(')
+		f.out.WriteByte('(')
 		f.expr(n.X)
-		f.out = append(f.out, ')')
+		f.out.WriteByte(')')
 
 	case *ast.CallExpr:
 		f.expr(&n.Fn)
-		f.out = append(f.out, '(')
+		f.out.WriteByte('(')
 		f.exprList(n.Args)
-		f.out = append(f.out, ')')
+		f.out.WriteByte(')')
 
 	case *ast.PipeExpr:
 		f.expr(n.Arg)
-		f.out = append(f.out, " | "...)
-		f.out = append(f.out, n.Func.Name...)
+		f.out.WriteString(" | ")
+		f.out.Write(n.Func.Name)
 
 	default:
 		panic(fmt.Sprintf("format: unexpected expr type %T", e))
@@ -124,7 +121,7 @@ func (f *formatter) exprList(l []ast.Expr) {
 		f.expr(l[0])
 	}
 	for i := 1; i < len(l); i++ {
-		f.out = append(f.out, ", "...)
+		f.out.WriteString(", ")
 		f.expr(l[i])
 	}
 }
