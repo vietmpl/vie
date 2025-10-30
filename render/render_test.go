@@ -3,6 +3,7 @@ package render_test
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/vietmpl/vie/parser"
 	"github.com/vietmpl/vie/render"
 	"github.com/vietmpl/vie/value"
@@ -210,9 +211,7 @@ func TestSource(t *testing.T) {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
-			if string(got) != test.output {
-				t.Errorf("--- got\n%s\n--- want\n%s", got, test.output)
-			}
+			assert.Equal(t, string(got), test.output)
 		})
 	}
 }

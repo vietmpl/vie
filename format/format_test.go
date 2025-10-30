@@ -1,28 +1,28 @@
 package format_test
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/vietmpl/vie/format"
 	"github.com/vietmpl/vie/parser"
 )
 
-func TestGoldenFiles(t *testing.T) {
-	entries, err := os.ReadDir("testdata")
+func TestSource(t *testing.T) {
+	tests, err := os.ReadDir("testdata")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	for _, e := range entries {
-		if e.IsDir() || strings.HasSuffix(e.Name(), ".golden") {
+	for _, test := range tests {
+		if strings.HasSuffix(test.Name(), ".golden") {
 			continue
 		}
 
-		name := e.Name()
+		name := test.Name()
 		t.Run(name, func(t *testing.T) {
 			inputPath := filepath.Join("testdata", name)
 			goldenPath := inputPath + ".golden"
@@ -41,9 +41,7 @@ func TestGoldenFiles(t *testing.T) {
 				t.Fatalf("missing golden file: %v", err)
 			}
 
-			if !bytes.Equal(got, want) {
-				t.Errorf("mismatch for %s\n--- got\n%s\n--- want\n%s", name, got, want)
-			}
+			assert.Equal(t, string(got), string(want))
 		})
 	}
 }

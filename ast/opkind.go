@@ -45,7 +45,7 @@ func ParseBinOpKind(s string) BinOpKind {
 			return BinOpKind(i)
 		}
 	}
-	panic(fmt.Sprintf("unexpected UnOpKind string: %s", s))
+	panic(fmt.Sprintf("unexpected BinOpKind string: %s", s))
 }
 
 type UnOpKind uint8

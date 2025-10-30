@@ -79,9 +79,8 @@ func TestTypes(t *testing.T) {
 				types:       gotTypes,
 				diagnostics: gotDiagnostics,
 			}
-			want := cases[name]
 
-			assert.Equal(t, got, want)
+			assert.Equal(t, got, cases[name])
 		})
 	}
 }
