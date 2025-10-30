@@ -1,0 +1,243 @@
+package render
+
+import (
+	"bytes"
+	"fmt"
+
+	"github.com/vietmpl/vie/ast"
+	"github.com/vietmpl/vie/value"
+)
+
+type renderer struct {
+	c   map[string]value.Value
+	out bytes.Buffer
+}
+
+func Source(src *ast.SourceFile, context map[string]value.Value) ([]byte, error) {
+	r := renderer{
+		c: context,
+	}
+	if err := r.stmts(src.Stmts); err != nil {
+		return nil, err
+	}
+	return r.out.Bytes(), nil
+}
+
+func (r *renderer) stmts(stmts []ast.Stmt) error {
+	for _, s := range stmts {
+		if err := r.stmt(s); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (r *renderer) stmt(s ast.Stmt) error {
+	switch n := s.(type) {
+	case *ast.Text:
+		r.out.Write(n.Value)
+		return nil
+
+	case *ast.RenderStmt:
+		x, err := evalExpr(r.c, n.X)
+		if err != nil {
+			return err
+		}
+		switch xv := x.(type) {
+		case value.String:
+			r.out.WriteString(string(xv))
+			return nil
+		// case value.Bool:
+		// 	return fmt.Errorf("render statements can only render string values; got bool")
+		default:
+			panic(fmt.Sprintf("render: unexpected value type in render statement %T", x))
+		}
+
+	case *ast.IfStmt:
+		condVal, err := evalExpr(r.c, n.Cond)
+		if err != nil {
+			return err
+		}
+		cond, ok := condVal.(value.Bool)
+		if !ok {
+			return fmt.Errorf("unexpected type in if condition: %T", condVal)
+		}
+
+		if cond {
+			if err := r.stmts(n.Cons); err != nil {
+				return err
+			}
+		} else {
+			var elseCond value.Bool
+			for _, elseIfClause := range n.ElseIfs {
+				elseCondVal, err := evalExpr(r.c, elseIfClause.Cond)
+				if err != nil {
+					return err
+				}
+				elseCond, ok = elseCondVal.(value.Bool)
+				if !ok {
+					return fmt.Errorf("unexpected type in else if condition: %T", condVal)
+				}
+				if elseCond {
+					if err := r.stmts(elseIfClause.Cons); err != nil {
+						return err
+					}
+					return nil
+				}
+			}
+			if n.Else != nil {
+				if err := r.stmts(n.Else.Cons); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+
+	case *ast.SwitchStmt:
+		valValue, err := evalExpr(r.c, n.Value)
+		if err != nil {
+			return err
+		}
+		_, ok := valValue.(value.String)
+		if !ok {
+			return fmt.Errorf("unexpected type in switch value: %T", valValue)
+		}
+		for _, c := range n.Cases {
+			for _, e := range c.List {
+				x, err := evalExpr(r.c, e)
+				if err != nil {
+					return err
+				}
+				if value.Eq(x, valValue) {
+					if err := r.stmts(c.Body); err != nil {
+						return err
+					}
+					return nil
+				}
+			}
+		}
+		panic("unreachable")
+
+	default:
+		panic(fmt.Sprintf("render: unexpected stmt type %T", s))
+	}
+}
+
+func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
+	switch n := e.(type) {
+	case *ast.BasicLit:
+		v := value.FromBasicLit(n)
+		return v, nil
+
+	case *ast.Ident:
+		v, exists := c[string(n.Name)]
+		if !exists {
+			return nil, fmt.Errorf("%s is undefined", n.Name)
+		}
+		return v, nil
+
+	case *ast.UnaryExpr:
+		x, err := evalExpr(c, n.X)
+		if err != nil {
+			return nil, err
+		}
+
+		switch n.Op {
+		case ast.UnOpKindExcl, ast.UnOpKindNot:
+			xs, ok := x.(value.Bool)
+			if !ok {
+				return nil, fmt.Errorf("unexpected type: %T", x)
+			}
+			return !xs, nil
+
+		default:
+			panic(fmt.Sprintf("render: unexpected UnOpKind: %T", n.Op))
+		}
+
+	case *ast.BinaryExpr:
+		x, err := evalExpr(c, n.X)
+		if err != nil {
+			return nil, err
+		}
+
+		y, err := evalExpr(c, n.Y)
+		if err != nil {
+			return nil, err
+		}
+		switch n.Op {
+		case ast.BinOpKindConcat:
+			// TODO: improve error messages.
+			xs, ok := x.(value.String)
+			if !ok {
+				return nil, fmt.Errorf("unexpected type in concat: %T", x)
+			}
+			ys, ok := y.(value.String)
+			if !ok {
+				return nil, fmt.Errorf("unexpected type in concat: %T", x)
+			}
+			return xs.Concat(ys), nil
+
+		case ast.BinOpKindEq,
+			ast.BinOpKindIs:
+			return value.Eq(x, y), nil
+
+		case ast.BinOpKindNeq,
+			ast.BinOpKindIsNot:
+			return value.Neq(x, y), nil
+
+		case ast.BinOpKindGtr,
+			ast.BinOpKindGeq,
+			ast.BinOpKindLss,
+			ast.BinOpKindLeq,
+			ast.BinOpKindLAnd,
+			ast.BinOpKindLOr,
+			ast.BinOpKindAnd,
+			ast.BinOpKindOr:
+
+			// TODO: improve error messages.
+			xs, ok := x.(value.Bool)
+			if !ok {
+				return nil, fmt.Errorf("unexpected type: %T", x)
+			}
+			ys, ok := y.(value.Bool)
+			if !ok {
+				return nil, fmt.Errorf("unexpected type: %T", x)
+			}
+
+			switch n.Op {
+			case ast.BinOpKindGtr:
+				return xs.Gtr(ys), nil
+			case ast.BinOpKindGeq:
+				return xs.Geq(ys), nil
+			case ast.BinOpKindLss:
+				return xs.Lss(ys), nil
+			case ast.BinOpKindLeq:
+				return xs.Leq(ys), nil
+			case ast.BinOpKindLAnd,
+				ast.BinOpKindAnd:
+				return xs.And(ys), nil
+			case ast.BinOpKindLOr,
+				ast.BinOpKindOr:
+				return xs.Or(ys), nil
+			default:
+				panic("unreachable")
+			}
+		default:
+			panic(fmt.Sprintf("render: unexpected BinOpKind: %T", n.Op))
+		}
+
+	case *ast.ParenExpr:
+		x, err := evalExpr(c, n.X)
+		if err != nil {
+			return nil, err
+		}
+		return x, nil
+
+	// case *ast.CallExpr:
+	//
+	// case *ast.PipeExpr:
+
+	default:
+		panic(fmt.Sprintf("render: unexpected expr type %T", e))
+	}
+}
