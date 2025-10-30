@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
@@ -12,6 +13,8 @@ import (
 	"github.com/vietmpl/vie/analisys"
 	"github.com/vietmpl/vie/format"
 	"github.com/vietmpl/vie/parser"
+	"github.com/vietmpl/vie/render"
+	"github.com/vietmpl/vie/value"
 )
 
 // Populated by goreleaser during build
@@ -29,13 +32,16 @@ func main() {
 	root.AddCommand(
 		formatCmd(),
 		contextCmd(),
+		renderCmd(),
 	)
 
 	if err := fang.Execute(
 		context.Background(),
 		root,
 		fang.WithVersion(root.Version),
-		fang.WithErrorHandler(errorHandler),
+		fang.WithErrorHandler(func(w io.Writer, _ fang.Styles, err error) {
+			_, _ = fmt.Fprintln(w, "vie:", err)
+		}),
 		fang.WithColorSchemeFunc(fang.AnsiColorScheme),
 	); err != nil {
 		os.Exit(1)
@@ -90,6 +96,37 @@ func contextCmd() *cobra.Command {
 	return cmd
 }
 
-func errorHandler(w io.Writer, _ fang.Styles, err error) {
-	_, _ = fmt.Fprintln(w, "vie:", err)
+func renderCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "render <path>",
+		Args: cobra.MinimumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path := args[0]
+
+			src, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			params := make(map[string]value.Value)
+			for _, a := range args[1:] {
+				if strings.Contains(a, "=") {
+					kv := strings.SplitN(a, "=", 2)
+					params[kv[0]] = value.String(kv[1])
+				} else {
+					params[a] = value.Bool(true)
+				}
+			}
+
+			sf := parser.ParseFile(src)
+			out, err := render.Source(sf, params)
+			if err != nil {
+				return err
+			}
+
+			fmt.Fprint(cmd.OutOrStdout(), string(out))
+			return nil
+		},
+	}
+	return cmd
 }
