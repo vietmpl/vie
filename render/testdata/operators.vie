@@ -1,0 +1,14 @@
+{% if "" == "" %}1{% end %}
+{% if "a" == "a" %}1{% end %}
+{% if "a" != "b" %}1{% end %}
+{% if true == true %}1{% end %}
+{% if false == false %}1{% end %}
+{% if false != true %}1{% end %}
+{% if true > false %}1{% end %}
+{% if true >= false %}1{% end %}
+{% if false < true %}1{% end %}
+{% if false or true %}1{% end %}
+{% if true or true %}1{% end %}
+{% if not false %}1{% end %}
+{% if !false %}1{% end %}
+{% if (true or false) and true %}1{% end %}

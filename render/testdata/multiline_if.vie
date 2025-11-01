@@ -1,0 +1,27 @@
+{% if true %}
+1
+{% end %}
+
+{% if true %}
+{{ 'str' }} text
+{% end %}
+
+{% if true %}
+
+1
+
+{% end %}
+
+{% if true %}
+1
+{% end %}
+
+	{% if true %}
+	1
+	{% end %}
+
+{% if false %}
+1
+{% else %}
+2
+{% end %}
