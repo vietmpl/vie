@@ -15,18 +15,6 @@ type renderer struct {
 	afterTag bool
 }
 
-func (r *renderer) truncateTrailSpaces() {
-	data := r.out.Bytes()
-	i := len(data) - 1
-	for i >= 0 && (data[i] == ' ' || data[i] == '\t') {
-		i--
-	}
-	// If we reached start of buffer or the last non-space is a newline, truncate spaces
-	if i < 0 || data[i] == '\n' {
-		r.out.Truncate(i + 1)
-	}
-}
-
 func Source(src *ast.SourceFile, context map[string]value.Value) ([]byte, error) {
 	r := renderer{
 		c: context,
@@ -67,8 +55,6 @@ func (r *renderer) stmt(s ast.Stmt) error {
 		case value.String:
 			r.out.WriteString(string(xv))
 			return nil
-		// case value.Bool:
-		// 	return fmt.Errorf("render statements can only render string values; got bool")
 		default:
 			panic(fmt.Sprintf("render: unexpected value type in render statement %T", x))
 		}
@@ -87,7 +73,7 @@ func (r *renderer) stmt(s ast.Stmt) error {
 		r.afterTag = true
 
 		if cond {
-			r.truncateTrailSpaces()
+			r.truncateTrailspaces()
 			if err := r.stmts(n.Cons); err != nil {
 				return err
 			}
@@ -103,7 +89,7 @@ func (r *renderer) stmt(s ast.Stmt) error {
 					return fmt.Errorf("unexpected type in else if condition: %T", condVal)
 				}
 				if elseCond {
-					r.truncateTrailSpaces()
+					r.truncateTrailspaces()
 					if err := r.stmts(elseIfClause.Cons); err != nil {
 						return err
 					}
@@ -111,13 +97,13 @@ func (r *renderer) stmt(s ast.Stmt) error {
 				}
 			}
 			if n.Else != nil {
-				r.truncateTrailSpaces()
+				r.truncateTrailspaces()
 				if err := r.stmts(n.Else.Cons); err != nil {
 					return err
 				}
 			}
 		}
-		r.truncateTrailSpaces()
+		r.truncateTrailspaces()
 		r.afterTag = true
 		return nil
 
@@ -154,8 +140,7 @@ func (r *renderer) stmt(s ast.Stmt) error {
 func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
 	switch n := e.(type) {
 	case *ast.BasicLit:
-		v := value.FromBasicLit(n)
-		return v, nil
+		return value.FromBasicLit(n), nil
 
 	case *ast.Ident:
 		v, exists := c[string(n.Name)]
@@ -235,18 +220,24 @@ func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
 			switch n.Op {
 			case ast.BinOpKindGtr:
 				return xs.Gtr(ys), nil
+
 			case ast.BinOpKindGeq:
 				return xs.Geq(ys), nil
+
 			case ast.BinOpKindLss:
 				return xs.Lss(ys), nil
+
 			case ast.BinOpKindLeq:
 				return xs.Leq(ys), nil
+
 			case ast.BinOpKindLAnd,
 				ast.BinOpKindAnd:
 				return xs.And(ys), nil
+
 			case ast.BinOpKindLOr,
 				ast.BinOpKindOr:
 				return xs.Or(ys), nil
+
 			default:
 				panic("unreachable")
 			}
@@ -255,11 +246,7 @@ func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
 		}
 
 	case *ast.ParenExpr:
-		x, err := evalExpr(c, n.X)
-		if err != nil {
-			return nil, err
-		}
-		return x, nil
+		return evalExpr(c, n.X)
 
 	// case *ast.CallExpr:
 	//
@@ -267,5 +254,17 @@ func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
 
 	default:
 		panic(fmt.Sprintf("render: unexpected expr type %T", e))
+	}
+}
+
+func (r *renderer) truncateTrailspaces() {
+	data := r.out.Bytes()
+	i := len(data) - 1
+	for i >= 0 && (data[i] == ' ' || data[i] == '\t') {
+		i--
+	}
+	// If we reached start of buffer or the last non-space is a newline, truncate spaces
+	if i < 0 || data[i] == '\n' {
+		r.out.Truncate(i + 1)
 	}
 }
