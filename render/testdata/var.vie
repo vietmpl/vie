@@ -1,5 +1,8 @@
 {{ name }}
 {{ emptystring }}
+{{ @upper(name) }}
+{{ name | @upper }}
+{{ (name) | @upper }}
 {% if true_flag %}
 true
 {% end %}

@@ -1,0 +1,4 @@
+{{ @upper("test") }}
+{{ "test" | @upper }}
+{{ ("test") | @upper }}
+{{ "test" ~ "abc" | @upper }}

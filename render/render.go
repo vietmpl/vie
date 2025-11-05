@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/vietmpl/vie/ast"
+	"github.com/vietmpl/vie/builtin"
 	"github.com/vietmpl/vie/value"
 )
 
@@ -254,13 +255,59 @@ func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
 	case *ast.ParenExpr:
 		return evalExpr(c, n.X)
 
-	// case *ast.CallExpr:
-	//
-	// case *ast.PipeExpr:
+	case *ast.CallExpr:
+		fn, err := lookupFunction(n.Fn.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		args, err := evalExprList(c, n.Args)
+		if err != nil {
+			return nil, err
+		}
+		return fn.Call(args)
+
+	case *ast.PipeExpr:
+		fn, err := lookupFunction(n.Func.Name)
+		if err != nil {
+			return nil, err
+		}
+
+		arg, err := evalExpr(c, n.Arg)
+		if err != nil {
+			return nil, err
+		}
+		return fn.Call([]value.Value{arg})
 
 	default:
 		panic(fmt.Sprintf("render: unexpected expr type %T", e))
 	}
+}
+
+func evalExprList(c map[string]value.Value, l []ast.Expr) ([]value.Value, error) {
+	vals := make([]value.Value, 0, len(l))
+	for _, arg := range l {
+		v, err := evalExpr(c, arg)
+		if err != nil {
+			return nil, err
+		}
+		vals = append(vals, v)
+	}
+	return vals, nil
+}
+
+func lookupFunction(name []byte) (value.Function, error) {
+	if name[0] != '@' {
+		return value.Function{}, fmt.Errorf(
+			"function %s is undefined. Only builtin functions (starting with '@') are supported, user-defined functions are not yet implemented",
+			name,
+		)
+	}
+	fn, exists := builtin.Functions[string(name[1:])]
+	if !exists {
+		return value.Function{}, fmt.Errorf("function %s is undefined", name)
+	}
+	return fn, nil
 }
 
 func (r *renderer) truncateTrailspaces() {
