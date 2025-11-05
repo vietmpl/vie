@@ -1,0 +1,12 @@
+{{ name }}
+{{ emptystring }}
+{% if true_flag %}
+true
+{% end %}
+{% if false_flag %}
+not true
+{% end %}
+{% switch switch %}
+{% case "123" %}
+1
+{% end %}
