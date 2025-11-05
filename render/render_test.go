@@ -10,11 +10,13 @@ import (
 )
 
 func TestSource(t *testing.T) {
-	type tc struct {
+	t.Parallel()
+
+	type testCase struct {
 		context map[string]value.Value
 	}
 
-	cases := map[string]tc{
+	cases := map[string]testCase{
 		// TODO(skewb1k): avoid specifing full path.
 		"TestSource/var.vie": {
 			context: map[string]value.Value{

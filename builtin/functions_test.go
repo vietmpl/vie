@@ -16,6 +16,7 @@ func runFuncTests(t *testing.T, fn func([]value.Value) value.Value, cases []test
 	t.Helper()
 	for _, tt := range cases {
 		t.Run(string(tt.input), func(t *testing.T) {
+			t.Parallel()
 			actual := fn([]value.Value{tt.input})
 			assert.Equal(t, tt.expected, actual)
 		})
@@ -23,6 +24,7 @@ func runFuncTests(t *testing.T, fn func([]value.Value) value.Value, cases []test
 }
 
 func TestUpperFunc(t *testing.T) {
+	t.Parallel()
 	tests := []testCase{
 		{"", ""},
 		{"hello", "HELLO"},
@@ -32,6 +34,7 @@ func TestUpperFunc(t *testing.T) {
 }
 
 func TestLowerFunc(t *testing.T) {
+	t.Parallel()
 	tests := []testCase{
 		{"", ""},
 		{"WORLD", "world"},

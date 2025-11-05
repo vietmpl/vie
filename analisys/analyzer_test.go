@@ -13,17 +13,19 @@ import (
 )
 
 func TestTypes(t *testing.T) {
+	t.Parallel()
+
 	entries, err := os.ReadDir("testdata")
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	type tc struct {
+	type testCase struct {
 		types       map[string]Type
 		diagnostics []Diagnostic
 	}
 
-	cases := map[string]tc{
+	cases := map[string]testCase{
 		"render": {
 			types: map[string]Type{
 				"name": TypeString,
@@ -66,6 +68,7 @@ func TestTypes(t *testing.T) {
 		fileName := e.Name()
 		name := fileName[:len(fileName)-len(".vie")]
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			inputPath := filepath.Join("testdata", fileName)
 
 			input, err := os.ReadFile(inputPath)
@@ -75,14 +78,12 @@ func TestTypes(t *testing.T) {
 
 			sf := parser.ParseFile(input)
 
-			gotTypes, gotDiagnostics := Source(sf)
+			actualTypes, actualDiagnostics := Source(sf)
 
-			got := tc{
-				types:       gotTypes,
-				diagnostics: gotDiagnostics,
-			}
-
-			assert.Equal(t, got, cases[name])
+			assert.Equal(t, cases[name], testCase{
+				types:       actualTypes,
+				diagnostics: actualDiagnostics,
+			})
 		})
 	}
 }

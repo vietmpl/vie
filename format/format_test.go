@@ -9,9 +9,10 @@ import (
 )
 
 func TestSource(t *testing.T) {
+	t.Parallel()
 	golden.Run(t, func(t *testing.T, input []byte) []byte {
 		sf := parser.ParseFile(input)
-		res := format.Source(sf)
-		return res
+		actual := format.Source(sf)
+		return actual
 	})
 }
