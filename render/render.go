@@ -3,6 +3,7 @@ package render
 import (
 	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/builtin"
@@ -39,12 +40,12 @@ func (r *renderer) stmt(s ast.Stmt) error {
 	switch n := s.(type) {
 	case *ast.Text:
 		if r.afterTag {
-			if i := bytes.IndexByte(n.Value, '\n'); i != -1 {
+			if i := strings.IndexByte(n.Value, '\n'); i != -1 {
 				n.Value = n.Value[i+1:]
 			}
 			r.afterTag = false
 		}
-		r.out.Write(n.Value)
+		r.out.WriteString(n.Value)
 		return nil
 
 	case *ast.RenderStmt:
@@ -256,7 +257,7 @@ func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
 		return evalExpr(c, n.X)
 
 	case *ast.CallExpr:
-		fn, err := lookupFunction(n.Fn.Name)
+		fn, err := lookupFunction(n.Func.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -296,14 +297,14 @@ func evalExprList(c map[string]value.Value, l []ast.Expr) ([]value.Value, error)
 	return vals, nil
 }
 
-func lookupFunction(name []byte) (value.Function, error) {
+func lookupFunction(name string) (value.Function, error) {
 	if name[0] != '@' {
 		return value.Function{}, fmt.Errorf(
 			"function %s is undefined. Only builtin functions (starting with '@') are supported, user-defined functions are not yet implemented",
 			name,
 		)
 	}
-	fn, exists := builtin.Functions[string(name[1:])]
+	fn, exists := builtin.Functions[name[1:]]
 	if !exists {
 		return value.Function{}, fmt.Errorf("function %s is undefined", name)
 	}

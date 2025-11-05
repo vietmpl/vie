@@ -227,7 +227,7 @@ func (p parser) expr() ast.Expr {
 		var call ast.CallExpr
 
 		n := p.Node()
-		call.Fn = ast.Ident{
+		call.Func = ast.Ident{
 			NamePos: posFromTsPoint(n.StartPosition()),
 			Name:    p.nodeContent(n),
 		}
@@ -282,8 +282,8 @@ func (p parser) exprList() []ast.Expr {
 	return list
 }
 
-func (p parser) nodeContent(n *ts.Node) []byte {
-	return p.src[n.StartByte():n.EndByte()]
+func (p parser) nodeContent(n *ts.Node) string {
+	return string(p.src[n.StartByte():n.EndByte()])
 }
 
 func posFromTsPoint(p ts.Point) ast.Pos {

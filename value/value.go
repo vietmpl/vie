@@ -1,7 +1,6 @@
 package value
 
 import (
-	"bytes"
 	"fmt"
 	"strconv"
 
@@ -23,7 +22,7 @@ func (Bool) Type() Type { return TypeBool }
 func FromBasicLit(l *ast.BasicLit) Value {
 	switch l.Kind {
 	case ast.KindBool:
-		return Bool(bytes.Equal(l.Value, []byte("true")))
+		return Bool(l.Value == "true")
 	case ast.KindString:
 		// TODO(skewb1k): Replace this hack with a manual parser that handles
 		// escape sequences and quote types. Currently we wrap single-quote

@@ -36,11 +36,11 @@ type SourceFile struct {
 
 type (
 	Text struct {
-		Value []byte
+		Value string
 	}
 
 	Comment struct {
-		Content []byte
+		Content string
 	}
 
 	RenderStmt struct {
@@ -98,12 +98,12 @@ type (
 	BasicLit struct {
 		ValuePos Pos
 		Kind     BasicLitKind
-		Value    []byte
+		Value    string
 	}
 
 	Ident struct {
 		NamePos Pos    // identifier position
-		Name    []byte // identifier name
+		Name    string // identifier name
 	}
 
 	UnaryExpr struct {
@@ -124,7 +124,7 @@ type (
 	}
 
 	CallExpr struct {
-		Fn   Ident  // function name
+		Func Ident  // function name
 		Args []Expr // function arguments
 	}
 
@@ -147,7 +147,7 @@ func (s *Ident) Pos() Pos      { return s.NamePos }
 func (s *UnaryExpr) Pos() Pos  { return s.OpPos }
 func (s *BinaryExpr) Pos() Pos { return s.X.Pos() }
 func (s *ParenExpr) Pos() Pos  { return s.Lparen }
-func (s *CallExpr) Pos() Pos   { return s.Fn.Pos() }
+func (s *CallExpr) Pos() Pos   { return s.Func.Pos() }
 func (s *PipeExpr) Pos() Pos   { return s.Arg.Pos() }
 
 func (*Text) node()       {}

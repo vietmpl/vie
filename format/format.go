@@ -31,7 +31,7 @@ func (f *formatter) stmts(stmts []ast.Stmt) {
 func (f *formatter) stmt(s ast.Stmt) {
 	switch n := s.(type) {
 	case *ast.Text:
-		f.out.Write(n.Value)
+		f.out.WriteString(n.Value)
 
 	case *ast.RenderStmt:
 		f.out.WriteString("{{ ")
@@ -75,10 +75,10 @@ func (f *formatter) stmt(s ast.Stmt) {
 func (f *formatter) expr(e ast.Expr) {
 	switch n := e.(type) {
 	case *ast.BasicLit:
-		f.out.Write(n.Value)
+		f.out.WriteString(n.Value)
 
 	case *ast.Ident:
-		f.out.Write(n.Name)
+		f.out.WriteString(n.Name)
 
 	case *ast.UnaryExpr:
 		f.out.WriteString(n.Op.String())
@@ -101,7 +101,7 @@ func (f *formatter) expr(e ast.Expr) {
 		f.out.WriteByte(')')
 
 	case *ast.CallExpr:
-		f.expr(&n.Fn)
+		f.expr(&n.Func)
 		f.out.WriteByte('(')
 		f.exprList(n.Args)
 		f.out.WriteByte(')')
@@ -109,7 +109,7 @@ func (f *formatter) expr(e ast.Expr) {
 	case *ast.PipeExpr:
 		f.expr(n.Arg)
 		f.out.WriteString(" | ")
-		f.out.Write(n.Func.Name)
+		f.out.WriteString(n.Func.Name)
 
 	default:
 		panic(fmt.Sprintf("format: unexpected expr type %T", e))
