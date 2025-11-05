@@ -116,6 +116,9 @@ func (r *renderer) stmt(s ast.Stmt) error {
 		if !ok {
 			return fmt.Errorf("unexpected type in switch value: %T", valValue)
 		}
+
+		r.afterTag = true
+
 		for _, c := range n.Cases {
 			for _, e := range c.List {
 				x, err := evalExpr(r.c, e)
@@ -123,9 +126,12 @@ func (r *renderer) stmt(s ast.Stmt) error {
 					return err
 				}
 				if value.Eq(x, valValue) {
+					r.truncateTrailspaces()
 					if err := r.stmts(c.Body); err != nil {
 						return err
 					}
+					r.truncateTrailspaces()
+					r.afterTag = true
 					return nil
 				}
 			}
