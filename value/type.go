@@ -1,10 +1,8 @@
-package analisys
+package value
 
-import (
-	"fmt"
-)
+import "fmt"
 
-type Type uint
+type Type uint8
 
 const (
 	TypeBool Type = iota

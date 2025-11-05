@@ -6,8 +6,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
 	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/parser"
+	. "github.com/vietmpl/vie/value"
 )
 
 func TestTypes(t *testing.T) {

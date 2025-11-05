@@ -8,14 +8,16 @@ import (
 )
 
 type Value interface {
-	value()
+	Type() Type
 }
 
 type String string
+
+func (String) Type() Type { return TypeString }
+
 type Bool bool
 
-func (String) value() {}
-func (Bool) value()   {}
+func (Bool) Type() Type { return TypeBool }
 
 func FromBasicLit(l *ast.BasicLit) Value {
 	switch l.Kind {

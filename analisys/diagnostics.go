@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/vietmpl/vie/ast"
+	"github.com/vietmpl/vie/value"
 )
 
 type Diagnostic interface {
@@ -12,8 +13,8 @@ type Diagnostic interface {
 }
 
 type WrongUsage struct {
-	ExpectedType Type
-	GotType      Type
+	ExpectedType value.Type
+	GotType      value.Type
 	_Pos         ast.Pos
 }
 
@@ -26,8 +27,8 @@ func (d *WrongUsage) Pos() ast.Pos {
 }
 
 type InvalidOperation struct {
-	Typ1 Type
-	Typ2 Type
+	Typ1 value.Type
+	Typ2 value.Type
 	_Pos ast.Pos
 }
 

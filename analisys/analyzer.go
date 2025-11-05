@@ -4,39 +4,40 @@ import (
 	"fmt"
 
 	"github.com/vietmpl/vie/ast"
+	"github.com/vietmpl/vie/value"
 )
 
 type analyzer struct {
-	tm          map[string]*[TypeString + 1]uint
+	tm          map[string]*[value.TypeString + 1]uint
 	diagnostics []Diagnostic
 }
 
 func newAnalyzer() *analyzer {
 	return &analyzer{
-		tm: make(map[string]*[TypeString + 1]uint),
+		tm: make(map[string]*[value.TypeString + 1]uint),
 	}
 }
 
-func (a *analyzer) addType(name string, typ Type) {
+func (a *analyzer) addType(name string, typ value.Type) {
 	if a.tm[name] == nil {
-		a.tm[name] = new([TypeString + 1]uint)
+		a.tm[name] = new([value.TypeString + 1]uint)
 	}
 
 	a.tm[name][typ]++
 }
 
-func Source(src *ast.SourceFile) (map[string]Type, []Diagnostic) {
+func Source(src *ast.SourceFile) (map[string]value.Type, []Diagnostic) {
 	a := newAnalyzer()
 	a.stmts(src.Stmts)
 
-	types := make(map[string]Type, len(a.tm))
+	types := make(map[string]value.Type, len(a.tm))
 	for varname, usages := range a.tm {
 		var maxCount uint
-		var maxType Type
+		var maxType value.Type
 		for t, count := range usages {
 			if count > maxCount {
 				maxCount = count
-				maxType = Type(t)
+				maxType = value.Type(t)
 			}
 		}
 		types[varname] = maxType
@@ -51,13 +52,13 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 		case *ast.Text:
 
 		case *ast.RenderStmt:
-			a.expr(n.X, TypeString)
+			a.expr(n.X, value.TypeString)
 
 		case *ast.IfStmt:
-			a.expr(n.Cond, TypeBool)
+			a.expr(n.Cond, value.TypeBool)
 			a.stmts(n.Cons)
 			for _, elseIfClause := range n.ElseIfs {
-				a.expr(elseIfClause.Cond, TypeBool)
+				a.expr(elseIfClause.Cond, value.TypeBool)
 				a.stmts(elseIfClause.Cons)
 			}
 			if n.Else != nil {
@@ -72,15 +73,15 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 	}
 }
 
-func (a *analyzer) expr(e ast.Expr, typ Type) {
+func (a *analyzer) expr(e ast.Expr, typ value.Type) {
 	switch n := e.(type) {
 	case *ast.BasicLit:
-		var got Type
+		var got value.Type
 		switch n.Kind {
 		case ast.KindBool:
-			got = TypeBool
+			got = value.TypeBool
 		case ast.KindString:
-			got = TypeString
+			got = value.TypeString
 		default:
 			panic(fmt.Sprintf("analyzer: unexpected BasicLit kind %d", n.Kind))
 		}
@@ -98,13 +99,13 @@ func (a *analyzer) expr(e ast.Expr, typ Type) {
 
 	case *ast.UnaryExpr:
 		// The '!' and 'not' operators can only be applied to boolean values
-		a.expr(n.X, TypeBool)
+		a.expr(n.X, value.TypeBool)
 
 	case *ast.BinaryExpr:
 		switch n.Op {
 		case ast.BinOpKindConcat:
-			a.expr(n.X, TypeString)
-			a.expr(n.Y, TypeString)
+			a.expr(n.X, value.TypeString)
+			a.expr(n.Y, value.TypeString)
 		case
 			ast.BinOpKindEq,
 			ast.BinOpKindNeq,
@@ -119,8 +120,8 @@ func (a *analyzer) expr(e ast.Expr, typ Type) {
 			ast.BinOpKindLOr,
 			ast.BinOpKindAnd,
 			ast.BinOpKindOr:
-			a.expr(n.X, TypeBool)
-			a.expr(n.Y, TypeBool)
+			a.expr(n.X, value.TypeBool)
+			a.expr(n.Y, value.TypeBool)
 		}
 
 	case *ast.ParenExpr:
