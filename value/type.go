@@ -7,6 +7,7 @@ type Type uint8
 const (
 	TypeBool Type = iota
 	TypeString
+	TypeFunction
 )
 
 func (t Type) String() string {
@@ -15,6 +16,8 @@ func (t Type) String() string {
 		return "bool"
 	case TypeString:
 		return "string"
+	case TypeFunction:
+		return "function"
 	default:
 		panic(fmt.Sprintf("unexpected Type value: %d", t))
 	}

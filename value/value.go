@@ -2,6 +2,7 @@ package value
 
 import (
 	"bytes"
+	"fmt"
 	"strconv"
 
 	"github.com/vietmpl/vie/ast"
@@ -73,4 +74,24 @@ func Eq[T comparable](x, y T) Bool {
 
 func Neq[T comparable](x, y T) Bool {
 	return Bool(x != y)
+}
+
+type Function struct {
+	Name     string
+	ArgTypes []Type
+	Impl     func(args []Value) Value
+}
+
+func (Function) Type() Type { return TypeFunction }
+
+func (f *Function) Call(args []Value) (Value, error) {
+	if len(args) != len(f.ArgTypes) {
+		return nil, fmt.Errorf("function %s expects %d arguments, got %d", f.Name, len(f.ArgTypes), len(args))
+	}
+	for i, arg := range args {
+		if arg.Type() != f.ArgTypes[i] {
+			return nil, fmt.Errorf("argument %d: expected %v, got %v", i, f.ArgTypes[i], arg.Type())
+		}
+	}
+	return f.Impl(args), nil
 }
