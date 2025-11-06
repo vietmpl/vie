@@ -2,5 +2,5 @@
 {{ !true }}
 {{ !!"str" }}
 {{ not true }}
-{{ not "srr" }}
+{{ not "str" }}
 {{ not value }}
