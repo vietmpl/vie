@@ -10,6 +10,16 @@ import (
 	"github.com/vietmpl/vie/value"
 )
 
+func Source(src *ast.SourceFile, context map[string]value.Value) ([]byte, error) {
+	r := renderer{
+		c: context,
+	}
+	if err := r.renderStmts(src.Stmts); err != nil {
+		return nil, err
+	}
+	return r.out.Bytes(), nil
+}
+
 type renderer struct {
 	c   map[string]value.Value
 	out bytes.Buffer
@@ -17,26 +27,16 @@ type renderer struct {
 	afterTag bool
 }
 
-func Source(src *ast.SourceFile, context map[string]value.Value) ([]byte, error) {
-	r := renderer{
-		c: context,
-	}
-	if err := r.stmts(src.Stmts); err != nil {
-		return nil, err
-	}
-	return r.out.Bytes(), nil
-}
-
-func (r *renderer) stmts(stmts []ast.Stmt) error {
+func (r *renderer) renderStmts(stmts []ast.Stmt) error {
 	for _, s := range stmts {
-		if err := r.stmt(s); err != nil {
+		if err := r.renderStmt(s); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (r *renderer) stmt(s ast.Stmt) error {
+func (r *renderer) renderStmt(s ast.Stmt) error {
 	switch n := s.(type) {
 	case *ast.Text:
 		if r.afterTag {
@@ -49,7 +49,7 @@ func (r *renderer) stmt(s ast.Stmt) error {
 		return nil
 
 	case *ast.RenderStmt:
-		x, err := evalExpr(r.c, n.X)
+		x, err := r.evalExpr(n.X)
 		if err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ func (r *renderer) stmt(s ast.Stmt) error {
 		}
 
 	case *ast.IfStmt:
-		condVal, err := evalExpr(r.c, n.Cond)
+		condVal, err := r.evalExpr(n.Cond)
 		if err != nil {
 			return err
 		}
@@ -76,13 +76,13 @@ func (r *renderer) stmt(s ast.Stmt) error {
 
 		if cond {
 			r.truncateTrailspaces()
-			if err := r.stmts(n.Cons); err != nil {
+			if err := r.renderStmts(n.Cons); err != nil {
 				return err
 			}
 		} else {
 			var elseCond value.Bool
 			for _, elseIfClause := range n.ElseIfs {
-				elseCondVal, err := evalExpr(r.c, elseIfClause.Cond)
+				elseCondVal, err := r.evalExpr(elseIfClause.Cond)
 				if err != nil {
 					return err
 				}
@@ -92,7 +92,7 @@ func (r *renderer) stmt(s ast.Stmt) error {
 				}
 				if elseCond {
 					r.truncateTrailspaces()
-					if err := r.stmts(elseIfClause.Cons); err != nil {
+					if err := r.renderStmts(elseIfClause.Cons); err != nil {
 						return err
 					}
 					break
@@ -100,7 +100,7 @@ func (r *renderer) stmt(s ast.Stmt) error {
 			}
 			if n.Else != nil {
 				r.truncateTrailspaces()
-				if err := r.stmts(n.Else.Cons); err != nil {
+				if err := r.renderStmts(n.Else.Cons); err != nil {
 					return err
 				}
 			}
@@ -110,7 +110,7 @@ func (r *renderer) stmt(s ast.Stmt) error {
 		return nil
 
 	case *ast.SwitchStmt:
-		valValue, err := evalExpr(r.c, n.Value)
+		valValue, err := r.evalExpr(n.Value)
 		if err != nil {
 			return err
 		}
@@ -123,13 +123,13 @@ func (r *renderer) stmt(s ast.Stmt) error {
 
 		for _, c := range n.Cases {
 			for _, e := range c.List {
-				x, err := evalExpr(r.c, e)
+				x, err := r.evalExpr(e)
 				if err != nil {
 					return err
 				}
 				if value.Eq(x, valValue) {
 					r.truncateTrailspaces()
-					if err := r.stmts(c.Body); err != nil {
+					if err := r.renderStmts(c.Body); err != nil {
 						return err
 					}
 					r.truncateTrailspaces()
@@ -145,20 +145,20 @@ func (r *renderer) stmt(s ast.Stmt) error {
 	}
 }
 
-func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
-	switch n := e.(type) {
+func (r *renderer) evalExpr(expr ast.Expr) (value.Value, error) {
+	switch n := expr.(type) {
 	case *ast.BasicLit:
 		return value.FromBasicLit(n), nil
 
 	case *ast.Ident:
-		v, exists := c[string(n.Name)]
+		v, exists := r.c[string(n.Name)]
 		if !exists {
 			return nil, fmt.Errorf("%s is undefined", n.Name)
 		}
 		return v, nil
 
 	case *ast.UnaryExpr:
-		x, err := evalExpr(c, n.X)
+		x, err := r.evalExpr(n.X)
 		if err != nil {
 			return nil, err
 		}
@@ -176,12 +176,12 @@ func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
 		}
 
 	case *ast.BinaryExpr:
-		x, err := evalExpr(c, n.X)
+		x, err := r.evalExpr(n.X)
 		if err != nil {
 			return nil, err
 		}
 
-		y, err := evalExpr(c, n.Y)
+		y, err := r.evalExpr(n.Y)
 		if err != nil {
 			return nil, err
 		}
@@ -254,7 +254,7 @@ func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
 		}
 
 	case *ast.ParenExpr:
-		return evalExpr(c, n.X)
+		return r.evalExpr(n.X)
 
 	case *ast.CallExpr:
 		fn, err := lookupFunction(n.Func.Name)
@@ -262,7 +262,7 @@ func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
 			return nil, err
 		}
 
-		args, err := evalExprList(c, n.Args)
+		args, err := r.evalExprList(n.Args)
 		if err != nil {
 			return nil, err
 		}
@@ -274,21 +274,21 @@ func evalExpr(c map[string]value.Value, e ast.Expr) (value.Value, error) {
 			return nil, err
 		}
 
-		arg, err := evalExpr(c, n.Arg)
+		arg, err := r.evalExpr(n.Arg)
 		if err != nil {
 			return nil, err
 		}
 		return fn.Call([]value.Value{arg})
 
 	default:
-		panic(fmt.Sprintf("render: unexpected expr type %T", e))
+		panic(fmt.Sprintf("render: unexpected expr type %T", expr))
 	}
 }
 
-func evalExprList(c map[string]value.Value, l []ast.Expr) ([]value.Value, error) {
-	vals := make([]value.Value, 0, len(l))
-	for _, arg := range l {
-		v, err := evalExpr(c, arg)
+func (r *renderer) evalExprList(exprList []ast.Expr) ([]value.Value, error) {
+	vals := make([]value.Value, 0, len(exprList))
+	for _, arg := range exprList {
+		v, err := r.evalExpr(arg)
 		if err != nil {
 			return nil, err
 		}
@@ -311,6 +311,7 @@ func lookupFunction(name string) (value.Function, error) {
 	return fn, nil
 }
 
+// TODO(skewb1k): rename and reconsider.
 func (r *renderer) truncateTrailspaces() {
 	data := r.out.Bytes()
 	i := len(data) - 1
