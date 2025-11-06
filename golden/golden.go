@@ -14,6 +14,7 @@
 // Directory structure example:
 //
 // testdata/
+//
 //	golden/
 //	   test1.txt
 //	   test1.txt.golden
