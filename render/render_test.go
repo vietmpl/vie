@@ -34,7 +34,7 @@ func TestSource(t *testing.T) {
 		},
 	}
 
-	golden.Run(t, func(t *testing.T, input []byte) []byte {
+	golden.RunGoldenTestdata(t, func(t *testing.T, input []byte) []byte {
 		t.Parallel()
 		sf := parser.ParseFile(input)
 
