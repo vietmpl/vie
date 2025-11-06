@@ -148,7 +148,7 @@ func TestPascalFunc(t *testing.T) {
 		{"Oli, eine echte Schönheit", "OliEineEchteSchönheit"},
 	}
 	runFuncTests(t, pascal, tests)
-} 
+}
 
 func TestKebabFunc(t *testing.T) {
 	t.Parallel()
@@ -163,7 +163,7 @@ func TestKebabFunc(t *testing.T) {
 		{"Oli, eine echte Schönheit", "oli-eine-echte-schönheit"},
 	}
 	runFuncTests(t, kebab, tests)
-} 
+}
 
 func TestConstantFunc(t *testing.T) {
 	t.Parallel()
@@ -178,7 +178,7 @@ func TestConstantFunc(t *testing.T) {
 		{"Oli, eine echte Schönheit", "OLI_EINE_ECHTE_SCHÖNHEIT"},
 	}
 	runFuncTests(t, constant, tests)
-} 
+}
 
 func TestSnakeFunc(t *testing.T) {
 	t.Parallel()
