@@ -1,25 +1,20 @@
 package format
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/vietmpl/vie/ast"
 )
 
 type formatter struct {
-	out   bytes.Buffer
-	level uint
+	out strings.Builder
 }
 
 func Source(src *ast.SourceFile) []byte {
-	f := formatter{
-		// TODO(skewb1k): consider pre-alloc.
-		out:   bytes.Buffer{},
-		level: 0,
-	}
+	var f formatter
 	f.stmts(src.Stmts)
-	return f.out.Bytes()
+	return []byte(f.out.String())
 }
 
 func (f *formatter) stmts(stmts []ast.Stmt) {
