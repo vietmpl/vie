@@ -1,0 +1,6 @@
+{%switch key%}
+{% case a,b%}
+Text
+{% case a,b,c, %}
+Text
+{% end %}

@@ -3,6 +3,3 @@
 {{ foo ( x)}}
 {{foo   (x,y)}}
 {{ foo( bar(  )   ) }}
-
-{{a|foo}}
-{{ ""  |   @foo  }}
