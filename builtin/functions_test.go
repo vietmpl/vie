@@ -106,7 +106,7 @@ func TestReverseFunc(t *testing.T) {
 	runFuncTests(t, reverse, tests)
 }
 
-func TestTrimFunc(t *testing.T) {
+func TestTrimSpaceFunc(t *testing.T) {
 	t.Parallel()
 	tests := []testCase{
 		{"", ""},
@@ -117,5 +117,5 @@ func TestTrimFunc(t *testing.T) {
 		{"  Oli, eine echte Schönheit  ", "Oli, eine echte Schönheit"},
 		{"Hello, 世界", "Hello, 世界"},
 	}
-	runFuncTests(t, trim, tests)
+	runFuncTests(t, trimSpace, tests)
 }
