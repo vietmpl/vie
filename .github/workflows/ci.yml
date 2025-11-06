@@ -3,16 +3,14 @@ name: CI
 on: [push]
 
 jobs:
-  build:
+  format:
+    name: Formatting
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go: ["1.24", "1.25"]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
         with:
-          go-version: ${{ matrix.go }}
+          go-version: "1.25"
       - name: Check formatting
         run: |
           unformatted=$(gofmt -l .)
@@ -21,6 +19,46 @@ jobs:
             echo "$unformatted"
             exit 1
           fi
-      - run: go build -v ./...
-      - run: go test -v ./...
+
+  vet:
+    name: Vet
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
       - run: go vet ./...
+
+  build:
+    name: Build
+    needs: [format, vet]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        go: ["1.24", "1.25"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+      - run: go build
+
+  test:
+    name: Test
+    needs: [format, vet]
+    runs-on: ${{ matrix.os }}
+    continue-on-error: true
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        go: ["1.24", "1.25"]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+      # TODO(skewb1k): consider running with -race.
+      - run: go test ./...

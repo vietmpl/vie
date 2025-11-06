@@ -1,6 +1,6 @@
 module github.com/vietmpl/vie
 
-go 1.25.3
+go 1.24.2
 
 require (
 	github.com/charmbracelet/fang v0.4.3
