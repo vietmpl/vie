@@ -27,9 +27,15 @@ func TestSource(t *testing.T) {
 				"switch":      value.String("123"),
 			},
 		},
+		"TestSource/function/call-var.vie": {
+			context: map[string]value.Value{
+				"name": value.String("test"),
+			},
+		},
 	}
 
 	golden.Run(t, func(t *testing.T, input []byte) []byte {
+		t.Parallel()
 		sf := parser.ParseFile(input)
 
 		context := cases[t.Name()].context
