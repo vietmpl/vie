@@ -1,6 +1,7 @@
 package render_test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/vietmpl/vie/golden"
@@ -38,7 +39,8 @@ func TestSource(t *testing.T) {
 		t.Parallel()
 		sf := parser.ParseFile(input)
 
-		context := cases[t.Name()].context
+		name := filepath.ToSlash(t.Name())
+		context := cases[name].context
 
 		actual, err := render.Source(sf, context)
 		if err != nil {
