@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"bytes"
 	"fmt"
 
 	ts "github.com/tree-sitter/go-tree-sitter"
@@ -51,8 +52,12 @@ func (p parser) stmt() ast.Stmt {
 	n := p.Node()
 	switch n.Kind() {
 	case "text":
+		b := p.src[n.StartByte():n.EndByte()]
+		// TODO(skewb1k): improve perf.
+		b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
+		b = bytes.ReplaceAll(b, []byte("\r"), []byte("\n"))
 		return &ast.Text{
-			Value: p.nodeContent(n),
+			Value: string(b),
 		}
 
 	case "render":
