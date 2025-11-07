@@ -2,6 +2,7 @@ package render_test
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/vietmpl/vie/golden"
@@ -18,8 +19,7 @@ func TestSource(t *testing.T) {
 	}
 
 	cases := map[string]testCase{
-		// TODO(skewb1k): avoid specifing full path.
-		"TestSource/var.vie": {
+		"var.vie": {
 			context: map[string]value.Value{
 				"name":        value.String("test"),
 				"emptystring": value.String(""),
@@ -28,7 +28,7 @@ func TestSource(t *testing.T) {
 				"switch":      value.String("123"),
 			},
 		},
-		"TestSource/function/call-var.vie": {
+		"function/call-var.vie": {
 			context: map[string]value.Value{
 				"name": value.String("test"),
 			},
@@ -40,6 +40,7 @@ func TestSource(t *testing.T) {
 		sf := parser.ParseFile(input)
 
 		name := filepath.ToSlash(t.Name())
+		name = strings.TrimPrefix(name, "TestSource/")
 		context := cases[name].context
 
 		actual, err := render.Source(sf, context)
