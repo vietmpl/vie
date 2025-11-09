@@ -37,13 +37,13 @@ func TestSource(t *testing.T) {
 
 	golden.Run(t, func(t *testing.T, input []byte) []byte {
 		t.Parallel()
-		sf := parser.ParseFile(input)
+		sf := parser.Source(input)
 
 		name := filepath.ToSlash(t.Name())
 		name = strings.TrimPrefix(name, "TestSource/")
 		context := cases[name].context
 
-		actual, err := render.Source(sf, context)
+		actual, err := render.File(sf, context)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

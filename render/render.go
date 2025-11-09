@@ -9,11 +9,11 @@ import (
 	"github.com/vietmpl/vie/value"
 )
 
-func Source(src *ast.SourceFile, context map[string]value.Value) ([]byte, error) {
+func File(file *ast.File, context map[string]value.Value) ([]byte, error) {
 	r := renderer{
 		c: context,
 	}
-	if err := r.renderStmts(src.Stmts); err != nil {
+	if err := r.renderStmts(file.Stmts); err != nil {
 		return nil, err
 	}
 	return r.out.Bytes(), nil

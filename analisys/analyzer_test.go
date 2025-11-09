@@ -76,9 +76,9 @@ func TestTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			sf := parser.ParseFile(input)
+			sf := parser.Source(input)
 
-			actualTypes, actualDiagnostics := Source(sf)
+			actualTypes, actualDiagnostics := File(sf)
 
 			assert.Equal(t, cases[name], testCase{
 				types:       actualTypes,

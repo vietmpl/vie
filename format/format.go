@@ -11,9 +11,9 @@ type formatter struct {
 	out strings.Builder
 }
 
-func Source(src *ast.SourceFile) []byte {
+func File(file *ast.File) []byte {
 	var f formatter
-	f.stmts(src.Stmts)
+	f.stmts(file.Stmts)
 	return []byte(f.out.String())
 }
 

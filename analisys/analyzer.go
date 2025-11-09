@@ -26,9 +26,9 @@ func (a *analyzer) addType(name string, typ value.Type) {
 	a.tm[name][typ]++
 }
 
-func Source(src *ast.SourceFile) (map[string]value.Type, []Diagnostic) {
+func File(file *ast.File) (map[string]value.Type, []Diagnostic) {
 	a := newAnalyzer()
-	a.stmts(src.Stmts)
+	a.stmts(file.Stmts)
 
 	types := make(map[string]value.Type, len(a.tm))
 	for varname, usages := range a.tm {

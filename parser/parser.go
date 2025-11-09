@@ -18,7 +18,7 @@ type parser struct {
 
 var language = ts.NewLanguage(tree_sitter_vie.Language())
 
-func ParseFile(src []byte) *ast.SourceFile {
+func Source(src []byte) *ast.File {
 	tsParser := ts.NewParser()
 	_ = tsParser.SetLanguage(language)
 	defer tsParser.Close()
@@ -37,17 +37,17 @@ func ParseFile(src []byte) *ast.SourceFile {
 	p.GotoFirstChild()
 	defer p.GotoParent()
 
-	var sf ast.SourceFile
+	var f ast.File
 	for {
 		stmt := p.stmt()
 		if stmt != nil {
-			sf.Stmts = append(sf.Stmts, stmt)
+			f.Stmts = append(f.Stmts, stmt)
 		}
 		if !p.GotoNextSibling() {
 			break
 		}
 	}
-	return &sf
+	return &f
 }
 
 func (p parser) stmt() ast.Stmt {

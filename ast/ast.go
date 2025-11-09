@@ -27,8 +27,8 @@ type Expr interface {
 	// TODO: add End().
 }
 
-// SourceFile represents a complete parsed file.
-type SourceFile struct {
+// File represents a complete parsed file.
+type File struct {
 	Stmts []Stmt
 }
 
