@@ -36,19 +36,19 @@ func (f *formatter) stmt(s ast.Stmt) {
 	case *ast.IfStmt:
 		f.out.WriteString("{% if ")
 		f.expr(n.Cond)
-		f.out.WriteString(" %}")
+		f.out.WriteString(" %}\n")
 		f.stmts(n.Cons)
 		for _, elseIfClause := range n.ElseIfs {
 			f.out.WriteString("{% else if ")
 			f.expr(elseIfClause.Cond)
-			f.out.WriteString(" %}")
+			f.out.WriteString(" %}\n")
 			f.stmts(elseIfClause.Cons)
 		}
 		if n.Else != nil {
-			f.out.WriteString("{% else %}")
+			f.out.WriteString("{% else %}\n")
 			f.stmts(n.Else.Cons)
 		}
-		f.out.WriteString("{% end %}")
+		f.out.WriteString("{% end %}\n")
 
 	case *ast.SwitchStmt:
 		f.out.WriteString("{% switch ")
@@ -57,10 +57,10 @@ func (f *formatter) stmt(s ast.Stmt) {
 		for _, c := range n.Cases {
 			f.out.WriteString("{% case ")
 			f.exprList(c.List)
-			f.out.WriteString(" %}")
+			f.out.WriteString(" %}\n")
 			f.stmts(c.Body)
 		}
-		f.out.WriteString("{% end %}")
+		f.out.WriteString("{% end %}\n")
 
 	default:
 		panic(fmt.Sprintf("format: unexpected stmt type %T", s))

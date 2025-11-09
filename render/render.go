@@ -3,7 +3,6 @@ package render
 import (
 	"bytes"
 	"fmt"
-	"strings"
 
 	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/builtin"
@@ -23,8 +22,6 @@ func Source(src *ast.SourceFile, context map[string]value.Value) ([]byte, error)
 type renderer struct {
 	c   map[string]value.Value
 	out bytes.Buffer
-
-	afterTag bool
 }
 
 func (r *renderer) renderStmts(stmts []ast.Stmt) error {
@@ -39,12 +36,6 @@ func (r *renderer) renderStmts(stmts []ast.Stmt) error {
 func (r *renderer) renderStmt(s ast.Stmt) error {
 	switch n := s.(type) {
 	case *ast.Text:
-		if r.afterTag {
-			if i := strings.IndexByte(n.Value, '\n'); i != -1 {
-				n.Value = n.Value[i+1:]
-			}
-			r.afterTag = false
-		}
 		r.out.WriteString(n.Value)
 		return nil
 
@@ -70,9 +61,6 @@ func (r *renderer) renderStmt(s ast.Stmt) error {
 		if !ok {
 			return fmt.Errorf("unexpected type in if condition: %T", condVal)
 		}
-
-		// TODO(skewb1k): refactor or document.
-		r.afterTag = true
 
 		if cond {
 			r.truncateTrailspaces()
@@ -106,7 +94,6 @@ func (r *renderer) renderStmt(s ast.Stmt) error {
 			}
 		}
 		r.truncateTrailspaces()
-		r.afterTag = true
 		return nil
 
 	case *ast.SwitchStmt:
@@ -118,8 +105,6 @@ func (r *renderer) renderStmt(s ast.Stmt) error {
 		if !ok {
 			return fmt.Errorf("unexpected type in switch value: %T", valValue)
 		}
-
-		r.afterTag = true
 
 		for _, c := range n.Cases {
 			for _, e := range c.List {
@@ -133,7 +118,6 @@ func (r *renderer) renderStmt(s ast.Stmt) error {
 						return err
 					}
 					r.truncateTrailspaces()
-					r.afterTag = true
 					return nil
 				}
 			}

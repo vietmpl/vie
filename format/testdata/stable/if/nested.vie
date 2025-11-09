@@ -1,15 +1,15 @@
 {% if flag %}
 1
-  {% if flag %}
+{% if flag %}
   2
-  {% else if flag2 %}
+{% else if flag2 %}
   3
-    {% if flag3 %}
+{% if flag3 %}
     4
-    {% else if flag2 %}
+{% else if flag2 %}
     5
-    {% end %}
-  {% end %}
+{% end %}
+{% end %}
   6
 {% else %}
 7

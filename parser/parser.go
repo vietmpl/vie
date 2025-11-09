@@ -40,7 +40,9 @@ func ParseFile(src []byte) *ast.SourceFile {
 	var sf ast.SourceFile
 	for {
 		stmt := p.stmt()
-		sf.Stmts = append(sf.Stmts, stmt)
+		if stmt != nil {
+			sf.Stmts = append(sf.Stmts, stmt)
+		}
 		if !p.GotoNextSibling() {
 			break
 		}
@@ -50,12 +52,43 @@ func ParseFile(src []byte) *ast.SourceFile {
 
 func (p parser) stmt() ast.Stmt {
 	n := p.Node()
+	// TODO(skewb1k): use KindId instead of string comparisons.
 	switch n.Kind() {
 	case "text":
 		b := p.src[n.StartByte():n.EndByte()]
 		// TODO(skewb1k): improve perf.
 		b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
 		b = bytes.ReplaceAll(b, []byte("\r"), []byte("\n"))
+		if len(b) == 0 {
+			return nil
+		}
+		// TODO(skewb1k): store state about encountered tag node instead of this.
+		if p.GotoPreviousSibling() {
+			// Trim leading spaces and tabs up to and including the first newline if the previous node is a tag.
+			// 'text' nodes cannot follow another 'text', so the previous node must be a tag.
+			if p.Node().Kind() != "render" {
+				b = bytes.TrimLeft(b, " \t")
+				if len(b) > 0 && b[0] == '\n' {
+					b = b[1:]
+				}
+			}
+			p.GotoNextSibling()
+		}
+		// TODO(skewb1k): factor out to parser.Peek().
+		if p.GotoNextSibling() {
+			// Trim trail spaces and tabs up to and including the first newline if the previous node is a tag.
+			// 'text' nodes cannot follow another 'text', so the previous node must be a tag.
+			if p.Node().Kind() != "render" {
+				b = bytes.TrimRight(b, " \t")
+				if len(b) > 0 && b[len(b)-1] != '\n' {
+					b = append(b, '\n')
+				}
+			}
+			p.GotoPreviousSibling()
+		}
+		if len(b) == 0 {
+			return nil
+		}
 		return &ast.Text{
 			Value: string(b),
 		}
@@ -97,7 +130,10 @@ func (p parser) stmt() ast.Stmt {
 						p.GotoPreviousSibling()
 						break
 					}
-					elseIf.Cons = append(elseIf.Cons, p.stmt())
+					stmt := p.stmt()
+					if stmt != nil {
+						elseIf.Cons = append(elseIf.Cons, stmt)
+					}
 				}
 				ifStmt.ElseIfs = append(ifStmt.ElseIfs, elseIf)
 
@@ -114,7 +150,10 @@ func (p parser) stmt() ast.Stmt {
 						p.GotoPreviousSibling()
 						break
 					}
-					elseClause.Cons = append(elseClause.Cons, p.stmt())
+					stmt := p.stmt()
+					if stmt != nil {
+						elseClause.Cons = append(elseClause.Cons, stmt)
+					}
 				}
 				ifStmt.Else = &elseClause
 
@@ -122,10 +161,13 @@ func (p parser) stmt() ast.Stmt {
 				return &ifStmt
 
 			default:
-				ifStmt.Cons = append(ifStmt.Cons, p.stmt())
+				stmt := p.stmt()
+				if stmt != nil {
+					ifStmt.Cons = append(ifStmt.Cons, stmt)
+				}
 			}
 		}
-		panic("parser: unexpected EOF when parsing if_tag")
+		panic("parser: unexpected EOF while parsing If statement")
 
 	case "switch_tag":
 		var switchStmt ast.SwitchStmt
@@ -153,7 +195,10 @@ func (p parser) stmt() ast.Stmt {
 						p.GotoPreviousSibling()
 						break
 					}
-					caseClause.Body = append(caseClause.Body, p.stmt())
+					stmt := p.stmt()
+					if stmt != nil {
+						caseClause.Body = append(caseClause.Body, stmt)
+					}
 				}
 				switchStmt.Cases = append(switchStmt.Cases, caseClause)
 

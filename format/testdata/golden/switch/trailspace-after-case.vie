@@ -1,0 +1,4 @@
+{% switch key %}
+{% case "" %}    
+1
+{% end %}
