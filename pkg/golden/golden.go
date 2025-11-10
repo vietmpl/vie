@@ -92,12 +92,12 @@ func Run(t *testing.T, f func(t *testing.T, input []byte) []byte) {
 			}
 
 			want := input
-			expectedPath := path
+			wantPath := path
 
 			stable := strings.HasSuffix(path, stableSuffix)
 			if !stable {
-				expectedPath = path + goldenSuffix
-				want, err = os.ReadFile(expectedPath)
+				wantPath = path + goldenSuffix
+				want, err = os.ReadFile(wantPath)
 				if err != nil && !*update {
 					t.Fatalf("missing golden file for %s: %v", path, err)
 				}
@@ -106,7 +106,7 @@ func Run(t *testing.T, f func(t *testing.T, input []byte) []byte) {
 			got := f(t, input)
 
 			if *update {
-				if err := os.WriteFile(expectedPath, got, 0644); err != nil {
+				if err := os.WriteFile(wantPath, got, 0644); err != nil {
 					t.Fatalf("updating golden file: %v", err)
 				}
 				return
