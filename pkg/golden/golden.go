@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/google/go-cmp/cmp"
 )
 
 var update = flag.Bool("update", false, "update golden files")
@@ -91,28 +91,30 @@ func Run(t *testing.T, f func(t *testing.T, input []byte) []byte) {
 				t.Fatal(err)
 			}
 
-			expected := input
+			want := input
 			expectedPath := path
 
 			stable := strings.HasSuffix(path, stableSuffix)
 			if !stable {
 				expectedPath = path + goldenSuffix
-				expected, err = os.ReadFile(expectedPath)
+				want, err = os.ReadFile(expectedPath)
 				if err != nil && !*update {
 					t.Fatalf("missing golden file for %s: %v", path, err)
 				}
 			}
 
-			actual := f(t, input)
+			got := f(t, input)
 
 			if *update {
-				if err := os.WriteFile(expectedPath, actual, 0644); err != nil {
+				if err := os.WriteFile(expectedPath, got, 0644); err != nil {
 					t.Fatalf("updating golden file: %v", err)
 				}
 				return
 			}
 
-			assert.Equal(t, string(expected), string(actual))
+			if diff := cmp.Diff(string(want), string(got)); diff != "" {
+				t.Errorf("mismatch (-want +got):\n%s", diff)
+			}
 		})
 
 		return nil
