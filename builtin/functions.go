@@ -1,13 +1,30 @@
 package builtin
 
 import (
+	"fmt"
 	"strings"
 	"unicode"
 
+	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/value"
 )
 
-var Functions = map[string]value.Function{
+func LookupFunction(ident ast.Ident) (value.Function, error) {
+	name := ident.Name
+	if name[0] != '@' {
+		return value.Function{}, fmt.Errorf(
+			"function %s is undefined. Only builtin functions (starting with '@') are supported, user-defined functions are not yet implemented",
+			name,
+		)
+	}
+	fn, exists := functions[name[1:]]
+	if !exists {
+		return value.Function{}, fmt.Errorf("function %s is undefined", name)
+	}
+	return fn, nil
+}
+
+var functions = map[string]value.Function{
 	"upper": {
 		Name:     "upper",
 		ArgTypes: []value.Type{value.TypeString},

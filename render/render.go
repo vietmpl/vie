@@ -230,7 +230,7 @@ func (r *renderer) evalExpr(expr ast.Expr) (value.Value, error) {
 		return r.evalExpr(n.X)
 
 	case *ast.CallExpr:
-		fn, err := lookupFunction(n.Func.Name)
+		fn, err := builtin.LookupFunction(n.Func)
 		if err != nil {
 			return nil, err
 		}
@@ -242,7 +242,7 @@ func (r *renderer) evalExpr(expr ast.Expr) (value.Value, error) {
 		return fn.Call(args)
 
 	case *ast.PipeExpr:
-		fn, err := lookupFunction(n.Func.Name)
+		fn, err := builtin.LookupFunction(n.Func)
 		if err != nil {
 			return nil, err
 		}
@@ -268,18 +268,4 @@ func (r *renderer) evalExprList(exprList []ast.Expr) ([]value.Value, error) {
 		vals = append(vals, v)
 	}
 	return vals, nil
-}
-
-func lookupFunction(name string) (value.Function, error) {
-	if name[0] != '@' {
-		return value.Function{}, fmt.Errorf(
-			"function %s is undefined. Only builtin functions (starting with '@') are supported, user-defined functions are not yet implemented",
-			name,
-		)
-	}
-	fn, exists := builtin.Functions[name[1:]]
-	if !exists {
-		return value.Function{}, fmt.Errorf("function %s is undefined", name)
-	}
-	return fn, nil
 }
