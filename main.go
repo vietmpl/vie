@@ -10,7 +10,7 @@ import (
 	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
 
-	"github.com/vietmpl/vie/analisys"
+	"github.com/vietmpl/vie/analysis"
 	"github.com/vietmpl/vie/format"
 	"github.com/vietmpl/vie/parser"
 	"github.com/vietmpl/vie/render"
@@ -82,7 +82,7 @@ func contextCmd() *cobra.Command {
 			}
 
 			sf := parser.Source(src)
-			tm, diagnostics := analisys.File(sf)
+			tm, diagnostics := analysis.File(sf)
 			if len(diagnostics) != 0 {
 				fmt.Fprintf(cmd.OutOrStdout(), "%v\n", diagnostics)
 			}

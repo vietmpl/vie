@@ -1,4 +1,4 @@
-package analisys
+package analysis
 
 import (
 	"fmt"
