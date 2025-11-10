@@ -9,14 +9,17 @@ import (
 	"github.com/vietmpl/vie/value"
 )
 
-func File(file *ast.File, context map[string]value.Value) ([]byte, error) {
+// RenderFileUnsafe renders a parsed template file using the provided context.
+//
+// It assumes that both the file and the context have been type-checked using
+// the analysis package. If either is invalid, behavior is undefined and may
+// panic. For user-friendly error messages, use RenderFile instead.
+func RenderFileUnsafe(file *ast.File, context map[string]value.Value) []byte {
 	r := renderer{
 		c: context,
 	}
-	if err := r.renderStmts(file.Stmts); err != nil {
-		return nil, err
-	}
-	return []byte(r.out.String()), nil
+	r.renderStmts(file.Stmts)
+	return []byte(r.out.String())
 }
 
 type renderer struct {
@@ -24,93 +27,51 @@ type renderer struct {
 	out strings.Builder
 }
 
-func (r *renderer) renderStmts(stmts []ast.Stmt) error {
+func (r *renderer) renderStmts(stmts []ast.Stmt) {
 	for _, s := range stmts {
-		if err := r.renderStmt(s); err != nil {
-			return err
-		}
+		r.renderStmt(s)
 	}
-	return nil
 }
 
-func (r *renderer) renderStmt(s ast.Stmt) error {
+func (r *renderer) renderStmt(s ast.Stmt) {
 	switch n := s.(type) {
 	case *ast.Text:
 		r.out.WriteString(n.Value)
-		return nil
 
 	case *ast.RenderStmt:
-		x, err := r.evalExpr(n.X)
-		if err != nil {
-			return err
-		}
-		xv, ok := x.(value.String)
-		if !ok {
-			return fmt.Errorf("unexpected type in render statement: %T", x)
-		}
+		x := r.evalExpr(n.X)
+		xv := x.(value.String)
 		r.out.WriteString(string(xv))
-		return nil
 
 	case *ast.IfStmt:
-		condVal, err := r.evalExpr(n.Cond)
-		if err != nil {
-			return err
-		}
-		cond, ok := condVal.(value.Bool)
-		if !ok {
-			return fmt.Errorf("unexpected type in if condition: %T", condVal)
-		}
+		condVal := r.evalExpr(n.Cond)
+		cond := condVal.(value.Bool)
 
 		if cond {
-			if err := r.renderStmts(n.Cons); err != nil {
-				return err
-			}
+			r.renderStmts(n.Cons)
 		} else {
 			for _, elseIfClause := range n.ElseIfs {
-				elseCondVal, err := r.evalExpr(elseIfClause.Cond)
-				if err != nil {
-					return err
-				}
-				elseCond, ok := elseCondVal.(value.Bool)
-				if !ok {
-					return fmt.Errorf("unexpected type in else if condition: %T", condVal)
-				}
+				elseCondVal := r.evalExpr(elseIfClause.Cond)
+				elseCond := elseCondVal.(value.Bool)
 				if elseCond {
-					if err := r.renderStmts(elseIfClause.Cons); err != nil {
-						return err
-					}
+					r.renderStmts(elseIfClause.Cons)
 					break
 				}
 			}
 			if n.Else != nil {
-				if err := r.renderStmts(n.Else.Cons); err != nil {
-					return err
-				}
+				r.renderStmts(n.Else.Cons)
 			}
 		}
-		return nil
 
 	case *ast.SwitchStmt:
-		valValue, err := r.evalExpr(n.Value)
-		if err != nil {
-			return err
-		}
-		_, ok := valValue.(value.String)
-		if !ok {
-			return fmt.Errorf("unexpected type in switch value: %T", valValue)
-		}
+		val := r.evalExpr(n.Value)
 
 		for _, c := range n.Cases {
 			for _, e := range c.List {
-				x, err := r.evalExpr(e)
-				if err != nil {
-					return err
-				}
-				if value.Eq(x, valValue) {
-					if err := r.renderStmts(c.Body); err != nil {
-						return err
-					}
-					return nil
+				x := r.evalExpr(e)
+				if value.Eq(x, val) {
+					r.renderStmts(c.Body)
+					return
 				}
 			}
 		}
@@ -121,62 +82,36 @@ func (r *renderer) renderStmt(s ast.Stmt) error {
 	}
 }
 
-func (r *renderer) evalExpr(expr ast.Expr) (value.Value, error) {
-	switch n := expr.(type) {
+func (r renderer) evalExpr(expr ast.Expr) value.Value {
+	switch e := expr.(type) {
 	case *ast.BasicLit:
-		return value.FromBasicLit(n), nil
+		return value.FromBasicLit(e)
 
 	case *ast.Ident:
-		v, exists := r.c[n.Name]
-		if !exists {
-			return nil, fmt.Errorf("%s is undefined", n.Name)
-		}
-		return v, nil
+		return r.c[e.Name]
 
 	case *ast.UnaryExpr:
-		x, err := r.evalExpr(n.X)
-		if err != nil {
-			return nil, err
-		}
-
-		switch n.Op {
-		case ast.UnOpKindExcl, ast.UnOpKindNot:
-			xs, ok := x.(value.Bool)
-			if !ok {
-				return nil, fmt.Errorf("unexpected type: %T", x)
-			}
-			return !xs, nil
-
-		default:
-			panic(fmt.Sprintf("render: unexpected UnOpKind: %T", n.Op))
-		}
+		x := r.evalExpr(e.X)
+		// Assume that n.Op is valid and contains only '!' and 'not' operators.
+		xx := x.(value.Bool)
+		return !xx
 
 	case *ast.BinaryExpr:
-		x, err := r.evalExpr(n.X)
-		if err != nil {
-			return nil, err
-		}
-
-		y, err := r.evalExpr(n.Y)
-		if err != nil {
-			return nil, err
-		}
-		switch n.Op {
+		x := r.evalExpr(e.X)
+		y := r.evalExpr(e.Y)
+		switch e.Op {
 		case ast.BinOpKindConcat:
-			xs, xok := x.(value.String)
-			ys, yok := y.(value.String)
-			if !xok || !yok {
-				return nil, fmt.Errorf("cannot concatenate %T and %T", x, y)
-			}
-			return xs.Concat(ys), nil
+			xx := x.(value.String)
+			yy := y.(value.String)
+			return xx.Concat(yy)
 
 		case ast.BinOpKindEq,
 			ast.BinOpKindIs:
-			return value.Eq(x, y), nil
+			return value.Eq(x, y)
 
 		case ast.BinOpKindNeq,
 			ast.BinOpKindIsNot:
-			return value.Neq(x, y), nil
+			return value.Neq(x, y)
 
 		case ast.BinOpKindGtr,
 			ast.BinOpKindGeq,
@@ -187,85 +122,62 @@ func (r *renderer) evalExpr(expr ast.Expr) (value.Value, error) {
 			ast.BinOpKindAnd,
 			ast.BinOpKindOr:
 
-			xs, xok := x.(value.Bool)
-			ys, yok := y.(value.Bool)
-			switch {
-			case !xok && !yok:
-				return nil, fmt.Errorf("invalid operands to %s: %T and %T (expected bools)", n.Op, x, y)
-			case !xok:
-				return nil, fmt.Errorf("invalid left operand to %s: %T (expected bool)", n.Op, x)
-			case !yok:
-				return nil, fmt.Errorf("invalid right operand to %s: %T (expected bool)", n.Op, y)
-			}
+			xx := x.(value.Bool)
+			yy := y.(value.Bool)
 
-			switch n.Op {
+			switch e.Op {
 			case ast.BinOpKindGtr:
-				return xs.Gtr(ys), nil
+				return xx.Gtr(yy)
 
 			case ast.BinOpKindGeq:
-				return xs.Geq(ys), nil
+				return xx.Geq(yy)
 
 			case ast.BinOpKindLss:
-				return xs.Lss(ys), nil
+				return xx.Lss(yy)
 
 			case ast.BinOpKindLeq:
-				return xs.Leq(ys), nil
+				return xx.Leq(yy)
 
 			case ast.BinOpKindLAnd,
 				ast.BinOpKindAnd:
-				return xs.And(ys), nil
+				return xx.And(yy)
 
 			case ast.BinOpKindLOr,
 				ast.BinOpKindOr:
-				return xs.Or(ys), nil
+				return xx.Or(yy)
 
 			default:
 				panic("unreachable")
 			}
 		default:
-			panic(fmt.Sprintf("render: unexpected BinOpKind: %T", n.Op))
+			panic(fmt.Sprintf("render: unexpected BinOpKind: %T", e.Op))
 		}
 
 	case *ast.ParenExpr:
-		return r.evalExpr(n.X)
+		return r.evalExpr(e.X)
 
 	case *ast.CallExpr:
-		fn, err := builtin.LookupFunction(n.Func)
-		if err != nil {
-			return nil, err
-		}
-
-		args, err := r.evalExprList(n.Args)
-		if err != nil {
-			return nil, err
-		}
-		return fn.Call(args)
+		fn, _ := builtin.LookupFunction(e.Func)
+		args := r.evalExprList(e.Args)
+		res, _ := fn.Call(args)
+		return res
 
 	case *ast.PipeExpr:
-		fn, err := builtin.LookupFunction(n.Func)
-		if err != nil {
-			return nil, err
-		}
-
-		arg, err := r.evalExpr(n.Arg)
-		if err != nil {
-			return nil, err
-		}
-		return fn.Call([]value.Value{arg})
+		fn, _ := builtin.LookupFunction(e.Func)
+		arg := r.evalExpr(e.Arg)
+		res, _ := fn.Call([]value.Value{arg})
+		return res
 
 	default:
 		panic(fmt.Sprintf("render: unexpected expr type %T", expr))
 	}
 }
 
-func (r *renderer) evalExprList(exprList []ast.Expr) ([]value.Value, error) {
-	vals := make([]value.Value, 0, len(exprList))
+func (r renderer) evalExprList(exprList []ast.Expr) []value.Value {
+	values := make([]value.Value, 0, len(exprList))
 	for _, arg := range exprList {
-		v, err := r.evalExpr(arg)
-		if err != nil {
-			return nil, err
-		}
-		vals = append(vals, v)
+		v := r.evalExpr(arg)
+		values = append(values, v)
 	}
-	return vals, nil
+	return values
 }
