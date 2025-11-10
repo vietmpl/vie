@@ -45,11 +45,12 @@ func File(file *ast.File) (map[string]value.Type, []Diagnostic) {
 
 		types[name] = maxType
 
+		// report mismatched usages
 		for _, u := range uses {
 			if u.Type != maxType {
 				a.diagnostics = append(a.diagnostics, &WrongUsage{
-					ExpectedType: maxType,
-					GotType:      u.Type,
+					ExpectedType: u.Type,
+					GotType:      maxType,
 					_Pos:         u.Pos,
 				})
 			}

@@ -113,8 +113,8 @@ func TestTypes(t *testing.T) {
 			},
 			diagnostics: []Diagnostic{
 				&WrongUsage{
-					ExpectedType: TypeBool,
-					GotType:      TypeString,
+					ExpectedType: TypeString,
+					GotType:      TypeBool,
 					_Pos: ast.Pos{
 						Line:      6,
 						Character: 3,
@@ -128,16 +128,16 @@ func TestTypes(t *testing.T) {
 			},
 			diagnostics: []Diagnostic{
 				&WrongUsage{
-					ExpectedType: TypeString,
-					GotType:      TypeBool,
+					ExpectedType: TypeBool,
+					GotType:      TypeString,
 					_Pos: ast.Pos{
 						Line:      0,
 						Character: 6,
 					},
 				},
 				&WrongUsage{
-					ExpectedType: TypeString,
-					GotType:      TypeBool,
+					ExpectedType: TypeBool,
+					GotType:      TypeString,
 					_Pos: ast.Pos{
 						Line:      5,
 						Character: 6,
