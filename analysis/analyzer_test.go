@@ -1,4 +1,4 @@
-package analysis
+package analysis_test
 
 import (
 	"os"
@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	. "github.com/vietmpl/vie/analysis"
 	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/parser"
 	. "github.com/vietmpl/vie/value"
@@ -36,7 +37,7 @@ func TestTypes(t *testing.T) {
 				&WrongUsage{
 					WantType: TypeString,
 					GotType:  TypeBool,
-					_Pos: ast.Pos{
+					Pos_: ast.Pos{
 						Line:      3,
 						Character: 3,
 					},
@@ -74,7 +75,7 @@ func TestTypes(t *testing.T) {
 				&WrongUsage{
 					WantType: TypeString,
 					GotType:  TypeBool,
-					_Pos: ast.Pos{
+					Pos_: ast.Pos{
 						Line:      0,
 						Character: 8,
 					},
@@ -87,7 +88,7 @@ func TestTypes(t *testing.T) {
 				&WrongUsage{
 					WantType: TypeBool,
 					GotType:  TypeString,
-					_Pos: ast.Pos{
+					Pos_: ast.Pos{
 						Line:      0,
 						Character: 6,
 					},
@@ -100,7 +101,7 @@ func TestTypes(t *testing.T) {
 				&CrossVarTyping{
 					X: VarType("a"),
 					Y: VarType("b"),
-					_Pos: ast.Pos{
+					Pos_: ast.Pos{
 						Line:      0,
 						Character: 6,
 					},
@@ -115,7 +116,7 @@ func TestTypes(t *testing.T) {
 				&WrongUsage{
 					WantType: TypeString,
 					GotType:  TypeBool,
-					_Pos: ast.Pos{
+					Pos_: ast.Pos{
 						Line:      6,
 						Character: 3,
 					},
@@ -130,7 +131,7 @@ func TestTypes(t *testing.T) {
 				&WrongUsage{
 					WantType: TypeBool,
 					GotType:  TypeString,
-					_Pos: ast.Pos{
+					Pos_: ast.Pos{
 						Line:      0,
 						Character: 6,
 					},
@@ -138,7 +139,7 @@ func TestTypes(t *testing.T) {
 				&WrongUsage{
 					WantType: TypeBool,
 					GotType:  TypeString,
-					_Pos: ast.Pos{
+					Pos_: ast.Pos{
 						Line:      5,
 						Character: 6,
 					},

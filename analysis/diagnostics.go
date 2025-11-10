@@ -15,7 +15,7 @@ type Diagnostic interface {
 type WrongUsage struct {
 	WantType value.Type
 	GotType  value.Type
-	_Pos     ast.Pos
+	Pos_     ast.Pos
 }
 
 func (d *WrongUsage) String() string {
@@ -23,13 +23,13 @@ func (d *WrongUsage) String() string {
 }
 
 func (d *WrongUsage) Pos() ast.Pos {
-	return d._Pos
+	return d.Pos_
 }
 
 type InvalidOperation struct {
 	X    value.Type
 	Y    value.Type
-	_Pos ast.Pos
+	Pos_ ast.Pos
 }
 
 func (d *InvalidOperation) String() string {
@@ -38,25 +38,13 @@ func (d *InvalidOperation) String() string {
 }
 
 func (d *InvalidOperation) Pos() ast.Pos {
-	return d._Pos
+	return d.Pos_
 }
-
-// type NonBoolealInIf struct {
-// 	_Pos ast.Pos
-// }
-//
-// func (d *NonBoolealInIf) String() string {
-// 	return "non-boolean condition in if statement"
-// }
-//
-// func (d *NonBoolealInIf) Pos() ast.Pos {
-// 	return d._Pos
-// }
 
 type CrossVarTyping struct {
 	X    VarType
 	Y    VarType
-	_Pos ast.Pos
+	Pos_ ast.Pos
 }
 
 func (d *CrossVarTyping) String() string {
@@ -64,5 +52,5 @@ func (d *CrossVarTyping) String() string {
 }
 
 func (d *CrossVarTyping) Pos() ast.Pos {
-	return d._Pos
+	return d.Pos_
 }

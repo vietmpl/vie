@@ -51,7 +51,7 @@ func File(file *ast.File) (map[string]value.Type, []Diagnostic) {
 				a.diagnostics = append(a.diagnostics, &WrongUsage{
 					WantType: u.Type,
 					GotType:  maxType,
-					_Pos:     u.Pos,
+					Pos_:     u.Pos,
 				})
 			}
 		}
@@ -72,7 +72,7 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 					a.diagnostics = append(a.diagnostics, &WrongUsage{
 						WantType: value.TypeString,
 						GotType:  xx,
-						_Pos:     n.X.Pos(),
+						Pos_:     n.X.Pos(),
 					})
 				}
 			case VarType:
@@ -91,7 +91,7 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 					a.diagnostics = append(a.diagnostics, &WrongUsage{
 						WantType: value.TypeBool,
 						GotType:  condx,
-						_Pos:     n.Cond.Pos(),
+						Pos_:     n.Cond.Pos(),
 					})
 				}
 			case VarType:
@@ -110,7 +110,7 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 						a.diagnostics = append(a.diagnostics, &WrongUsage{
 							WantType: value.TypeBool,
 							GotType:  elseIfCondx,
-							_Pos:     elseIfClause.Cond.Pos(),
+							Pos_:     elseIfClause.Cond.Pos(),
 						})
 					}
 				case VarType:
@@ -183,7 +183,7 @@ func (a *analyzer) expr(e ast.Expr) any {
 						a.diagnostics = append(a.diagnostics, &InvalidOperation{
 							X:    xx,
 							Y:    yy,
-							_Pos: n.Pos(),
+							Pos_: n.Pos(),
 						})
 					}
 				// <lit> is <var>
@@ -208,7 +208,7 @@ func (a *analyzer) expr(e ast.Expr) any {
 					a.diagnostics = append(a.diagnostics, &CrossVarTyping{
 						X:    xx,
 						Y:    yy,
-						_Pos: n.Pos(),
+						Pos_: n.Pos(),
 					})
 				}
 			}
@@ -252,7 +252,7 @@ func (a *analyzer) expectOperandType(x any, pos ast.Pos, typ value.Type) {
 			a.diagnostics = append(a.diagnostics, &WrongUsage{
 				WantType: typ,
 				GotType:  xx,
-				_Pos:     pos,
+				Pos_:     pos,
 			})
 		}
 	case VarType:
