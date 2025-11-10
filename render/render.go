@@ -66,13 +66,12 @@ func (r *renderer) renderStmt(s ast.Stmt) error {
 				return err
 			}
 		} else {
-			var elseCond value.Bool
 			for _, elseIfClause := range n.ElseIfs {
 				elseCondVal, err := r.evalExpr(elseIfClause.Cond)
 				if err != nil {
 					return err
 				}
-				elseCond, ok = elseCondVal.(value.Bool)
+				elseCond, ok := elseCondVal.(value.Bool)
 				if !ok {
 					return fmt.Errorf("unexpected type in else if condition: %T", condVal)
 				}

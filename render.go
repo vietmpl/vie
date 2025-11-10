@@ -51,7 +51,6 @@ func renderCmd() *cobra.Command {
 			}
 
 			exit := false
-
 			for varname, typ := range tm {
 				val, ok := c[varname]
 				if ok {
@@ -59,9 +58,19 @@ func renderCmd() *cobra.Command {
 						fmt.Printf("%s: expected %s, got %s\n", varname, typ, val.Type())
 						exit = true
 					}
+				} else if !exit {
+					// Assign a default value for missing variables.
+					// TODO(skewb1k): maybe the parser should handle undefined variables.
+					switch typ {
+					case value.TypeBool:
+						c[varname] = value.Bool(false)
+					case value.TypeString:
+						c[varname] = value.String("")
+					default:
+						panic(fmt.Sprintf("unexpected Type value: %d", typ))
+					}
 				}
 			}
-
 			if exit {
 				return nil
 			}
