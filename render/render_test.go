@@ -28,7 +28,12 @@ func TestSource(t *testing.T) {
 				"switch":      value.String("123"),
 			},
 		},
-		"function/call-var.vie": {
+		"call-var.vie": {
+			context: map[string]value.Value{
+				"name": value.String("test"),
+			},
+		},
+		"pipe-var.vie": {
 			context: map[string]value.Value{
 				"name": value.String("test"),
 			},
