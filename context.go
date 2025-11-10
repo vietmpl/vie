@@ -2,12 +2,20 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/spf13/cobra"
 	"github.com/vietmpl/vie/analysis"
 	"github.com/vietmpl/vie/parser"
 )
+
+func printDiagnostics(w io.Writer, path string, diagnostics []analysis.Diagnostic) {
+	for _, d := range diagnostics {
+		pos := d.Pos()
+		fmt.Fprintf(w, "%s:%d:%d: %s\n", path, pos.Line, pos.Character, d.String())
+	}
+}
 
 func contextCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -21,12 +29,13 @@ func contextCmd() *cobra.Command {
 				return err
 			}
 
-			sf := parser.Source(src)
-			tm, diagnostics := analysis.File(sf)
-			if len(diagnostics) != 0 {
-				fmt.Fprintf(cmd.OutOrStdout(), "%v\n", diagnostics)
-			}
+			f := parser.Source(src)
 
+			tm, diagnostics := analysis.File(f)
+			if len(diagnostics) > 0 {
+				printDiagnostics(cmd.OutOrStdout(), path, diagnostics)
+				return nil
+			}
 			for varname, typ := range tm {
 				fmt.Fprintf(cmd.OutOrStdout(), "%s: %s\n", varname, typ.String())
 			}
