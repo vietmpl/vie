@@ -63,7 +63,6 @@ func (r *renderer) renderStmt(s ast.Stmt) error {
 		}
 
 		if cond {
-			r.truncateTrailspaces()
 			if err := r.renderStmts(n.Cons); err != nil {
 				return err
 			}
@@ -79,7 +78,6 @@ func (r *renderer) renderStmt(s ast.Stmt) error {
 					return fmt.Errorf("unexpected type in else if condition: %T", condVal)
 				}
 				if elseCond {
-					r.truncateTrailspaces()
 					if err := r.renderStmts(elseIfClause.Cons); err != nil {
 						return err
 					}
@@ -87,13 +85,11 @@ func (r *renderer) renderStmt(s ast.Stmt) error {
 				}
 			}
 			if n.Else != nil {
-				r.truncateTrailspaces()
 				if err := r.renderStmts(n.Else.Cons); err != nil {
 					return err
 				}
 			}
 		}
-		r.truncateTrailspaces()
 		return nil
 
 	case *ast.SwitchStmt:
@@ -113,11 +109,9 @@ func (r *renderer) renderStmt(s ast.Stmt) error {
 					return err
 				}
 				if value.Eq(x, valValue) {
-					r.truncateTrailspaces()
 					if err := r.renderStmts(c.Body); err != nil {
 						return err
 					}
-					r.truncateTrailspaces()
 					return nil
 				}
 			}
@@ -293,17 +287,4 @@ func lookupFunction(name string) (value.Function, error) {
 		return value.Function{}, fmt.Errorf("function %s is undefined", name)
 	}
 	return fn, nil
-}
-
-// TODO(skewb1k): rename and reconsider.
-func (r *renderer) truncateTrailspaces() {
-	data := r.out.Bytes()
-	i := len(data) - 1
-	for i >= 0 && (data[i] == ' ' || data[i] == '\t') {
-		i--
-	}
-	// If we reached start of buffer or the last non-space is a newline, truncate spaces
-	if i < 0 || data[i] == '\n' {
-		r.out.Truncate(i + 1)
-	}
 }
