@@ -44,13 +44,12 @@ func (r *renderer) renderStmt(s ast.Stmt) error {
 		if err != nil {
 			return err
 		}
-		switch xv := x.(type) {
-		case value.String:
-			r.out.WriteString(string(xv))
-			return nil
-		default:
-			panic(fmt.Sprintf("render: unexpected value type in render statement %T", x))
+		xv, ok := x.(value.String)
+		if !ok {
+			return fmt.Errorf("unexpected type in render statement: %T", x)
 		}
+		r.out.WriteString(string(xv))
+		return nil
 
 	case *ast.IfStmt:
 		condVal, err := r.evalExpr(n.Cond)
@@ -165,14 +164,10 @@ func (r *renderer) evalExpr(expr ast.Expr) (value.Value, error) {
 		}
 		switch n.Op {
 		case ast.BinOpKindConcat:
-			// TODO: improve error messages.
-			xs, ok := x.(value.String)
-			if !ok {
-				return nil, fmt.Errorf("unexpected type in concat: %T", x)
-			}
-			ys, ok := y.(value.String)
-			if !ok {
-				return nil, fmt.Errorf("unexpected type in concat: %T", x)
+			xs, xok := x.(value.String)
+			ys, yok := y.(value.String)
+			if !xok || !yok {
+				return nil, fmt.Errorf("cannot concatenate %T and %T", x, y)
 			}
 			return xs.Concat(ys), nil
 
@@ -193,14 +188,15 @@ func (r *renderer) evalExpr(expr ast.Expr) (value.Value, error) {
 			ast.BinOpKindAnd,
 			ast.BinOpKindOr:
 
-			// TODO: improve error messages.
-			xs, ok := x.(value.Bool)
-			if !ok {
-				return nil, fmt.Errorf("unexpected type: %T", x)
-			}
-			ys, ok := y.(value.Bool)
-			if !ok {
-				return nil, fmt.Errorf("unexpected type: %T", x)
+			xs, xok := x.(value.Bool)
+			ys, yok := y.(value.Bool)
+			switch {
+			case !xok && !yok:
+				return nil, fmt.Errorf("invalid operands to %s: %T and %T (expected bools)", n.Op, x, y)
+			case !xok:
+				return nil, fmt.Errorf("invalid left operand to %s: %T (expected bool)", n.Op, x)
+			case !yok:
+				return nil, fmt.Errorf("invalid right operand to %s: %T (expected bool)", n.Op, y)
 			}
 
 			switch n.Op {
