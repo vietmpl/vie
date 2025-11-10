@@ -13,13 +13,13 @@ type Diagnostic interface {
 }
 
 type WrongUsage struct {
-	ExpectedType value.Type
-	GotType      value.Type
-	_Pos         ast.Pos
+	WantType value.Type
+	GotType  value.Type
+	_Pos     ast.Pos
 }
 
 func (d *WrongUsage) String() string {
-	return fmt.Sprintf("cannot use %s as %s", d.GotType, d.ExpectedType)
+	return fmt.Sprintf("cannot use %s as %s", d.GotType, d.WantType)
 }
 
 func (d *WrongUsage) Pos() ast.Pos {

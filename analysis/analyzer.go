@@ -49,9 +49,9 @@ func File(file *ast.File) (map[string]value.Type, []Diagnostic) {
 		for _, u := range uses {
 			if u.Type != maxType {
 				a.diagnostics = append(a.diagnostics, &WrongUsage{
-					ExpectedType: u.Type,
-					GotType:      maxType,
-					_Pos:         u.Pos,
+					WantType: u.Type,
+					GotType:  maxType,
+					_Pos:     u.Pos,
 				})
 			}
 		}
@@ -70,9 +70,9 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 			case value.Type:
 				if xx != value.TypeString {
 					a.diagnostics = append(a.diagnostics, &WrongUsage{
-						ExpectedType: value.TypeString,
-						GotType:      xx,
-						_Pos:         n.X.Pos(),
+						WantType: value.TypeString,
+						GotType:  xx,
+						_Pos:     n.X.Pos(),
 					})
 				}
 			case VarType:
@@ -89,9 +89,9 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 			case value.Type:
 				if condx != value.TypeBool {
 					a.diagnostics = append(a.diagnostics, &WrongUsage{
-						ExpectedType: value.TypeBool,
-						GotType:      condx,
-						_Pos:         n.Cond.Pos(),
+						WantType: value.TypeBool,
+						GotType:  condx,
+						_Pos:     n.Cond.Pos(),
 					})
 				}
 			case VarType:
@@ -108,9 +108,9 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 				case value.Type:
 					if elseIfCondx != value.TypeBool {
 						a.diagnostics = append(a.diagnostics, &WrongUsage{
-							ExpectedType: value.TypeBool,
-							GotType:      elseIfCondx,
-							_Pos:         elseIfClause.Cond.Pos(),
+							WantType: value.TypeBool,
+							GotType:  elseIfCondx,
+							_Pos:     elseIfClause.Cond.Pos(),
 						})
 					}
 				case VarType:
@@ -250,9 +250,9 @@ func (a *analyzer) expectOperandType(x any, pos ast.Pos, typ value.Type) {
 	case value.Type:
 		if xx != typ {
 			a.diagnostics = append(a.diagnostics, &WrongUsage{
-				ExpectedType: typ,
-				GotType:      xx,
-				_Pos:         pos,
+				WantType: typ,
+				GotType:  xx,
+				_Pos:     pos,
 			})
 		}
 	case VarType:
