@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/vietmpl/vie/golden"
 	"github.com/vietmpl/vie/parser"
+	"github.com/vietmpl/vie/pkg/golden"
 	"github.com/vietmpl/vie/render"
 	"github.com/vietmpl/vie/value"
 )

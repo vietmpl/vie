@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/vietmpl/vie/format"
-	"github.com/vietmpl/vie/golden"
 	"github.com/vietmpl/vie/parser"
+	"github.com/vietmpl/vie/pkg/golden"
 )
 
 func TestSource(t *testing.T) {
