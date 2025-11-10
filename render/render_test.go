@@ -1,6 +1,7 @@
 package render_test
 
 import (
+	"bytes"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -49,7 +50,8 @@ func TestSource(t *testing.T) {
 		name = strings.TrimPrefix(name, "TestSource/")
 		context := cases[name].context
 
-		got := render.RenderFileUnsafe(f, context)
-		return got
+		var b bytes.Buffer
+		render.MustRenderFile(&b, f, context)
+		return b.Bytes()
 	})
 }

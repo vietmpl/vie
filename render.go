@@ -82,8 +82,7 @@ func renderCmd() *cobra.Command {
 				}
 			}
 
-			out := render.RenderFileUnsafe(f, c)
-			fmt.Printf("%s", out)
+			render.MustRenderFile(os.Stdout, f, c)
 			return nil
 		},
 	}
