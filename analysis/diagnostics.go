@@ -33,7 +33,7 @@ type InvalidOperation struct {
 }
 
 func (d *InvalidOperation) String() string {
-	// TODO: print entire invalid expression (like Go).
+	// TODO(skewb1k): print entire invalid expression (like Go).
 	return fmt.Sprintf("invalid operation: mismatched types %s and %s", d.X, d.Y)
 }
 

@@ -206,7 +206,7 @@ func (p parser) stmt() ast.Stmt {
 				return &switchStmt
 
 			case "text":
-				// TODO: allow only whitespaces.
+				// TODO(skewb1k): allow only whitespaces.
 
 			default:
 				panic(fmt.Sprintf("parser: unexpected tag when parsing switch kind %s", p.Node().Kind()))

@@ -1,8 +1,8 @@
 package render
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/builtin"
@@ -16,12 +16,12 @@ func File(file *ast.File, context map[string]value.Value) ([]byte, error) {
 	if err := r.renderStmts(file.Stmts); err != nil {
 		return nil, err
 	}
-	return r.out.Bytes(), nil
+	return []byte(r.out.String()), nil
 }
 
 type renderer struct {
 	c   map[string]value.Value
-	out bytes.Buffer
+	out strings.Builder
 }
 
 func (r *renderer) renderStmts(stmts []ast.Stmt) error {
@@ -128,7 +128,7 @@ func (r *renderer) evalExpr(expr ast.Expr) (value.Value, error) {
 		return value.FromBasicLit(n), nil
 
 	case *ast.Ident:
-		v, exists := r.c[string(n.Name)]
+		v, exists := r.c[n.Name]
 		if !exists {
 			return nil, fmt.Errorf("%s is undefined", n.Name)
 		}

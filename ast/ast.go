@@ -10,7 +10,7 @@ type Pos struct {
 // Node is the base interface implemented by all AST nodes.
 type Node interface {
 	node()
-	// TODO: implement Pos().
+	// TODO(skewb1k): implement Pos().
 }
 
 // Stmt is any top-level block node in the source file.
@@ -24,7 +24,7 @@ type Expr interface {
 	Node
 	Pos() Pos // position of first character belonging to the expression
 	exprNode()
-	// TODO: add End().
+	// TODO(skewb1k): add End().
 }
 
 // File represents a complete parsed file.
