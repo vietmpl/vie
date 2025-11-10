@@ -6,31 +6,6 @@
 // matches expected results stored in "golden" files. This package automates
 // reading input files, comparing their processed output to golden files, and
 // updating the golden files.
-//
-// Stable tests verify that applying a transformation function does not change
-// the input data. They are useful for checking that normalization or
-// formatting operations are stable and idempotent.
-//
-// Directory structure example:
-//
-// testdata/
-//
-//	golden/
-//	   test1.txt
-//	   test1.txt.golden
-//	   subdir/
-//	     test2.txt
-//	     test2.txt.golden
-//	stable/
-//	  test1.txt
-//	  test2.txt
-//
-// All non-golden files under the "testdata" directory (including
-// subdirectories) are treated as test inputs. For golden tests, each input
-// file should have a corresponding golden file with the same name plus the
-// ".golden" suffix. Files under the "stable" directory are used for stable
-// tests, where the output of the tested function is expected to be identical
-// to the input.
 package golden
 
 import (
@@ -46,69 +21,64 @@ import (
 
 var update = flag.Bool("update", false, "update golden files")
 
-// Run executes golden tests for all files in the "testdata/golden"
-// directory.
-//
-// It recursively scans the directory for all regular files that do not end
-// with ".golden". For each input file, it finds or generates a corresponding
-// golden file with the same name plus a ".golden" suffix.
-//
-// The function `f` is invoked for each test case with the testing.T and the
-// input file contents. Each test runs as a subtest named after the relative
-// file path and executes in parallel.
-//
-// If the -update flag is provided, the expected golden files are automatically
-// overwritten with the newly generated output from `f`.
-func Run(t *testing.T, f func(t *testing.T, input []byte) []byte) {
-	run(t, "golden", false, f)
-}
-
-// RunStable verifies that applying `f` to the input data produces identical
-// output.
-//
-// It scans all regular files in the specified subdirectory of the base
-// "testdata" directory and checks that f(input) returns the same bytes as
-// input.
-//
-// If the -update flag is set, the input files are overwritten with the output
-// from `f`.
-func RunStable(t *testing.T, f func(t *testing.T, input []byte) []byte) {
-	run(t, "stable", true, f)
-}
-
-// RunGoldenTestdata is a backward-compatible wrapper for running golden tests
-// on the base "testdata" directory.
-func RunGoldenTestdata(t *testing.T, f func(t *testing.T, input []byte) []byte) {
-	run(t, "", false, f)
-}
-
 const (
-	baseDir      = "testdata"
+	dir          = "testdata"
 	goldenSuffix = ".golden"
+	stableSuffix = ".stable"
 )
 
-func run(t *testing.T, dir string, stable bool, f func(t *testing.T, input []byte) []byte) {
+// Run executes golden tests for all files in the "testdata" directory.
+//
+// It recursively scans the directory for all regular files that do not end
+// with ".golden". For each input file, it looks for a corresponding golden
+// file with the same name plus the ".golden" suffix. The provided function `f`
+// is called for each test case with the testing.T and the input file content.
+// Each test runs as a subtest named after the relative file path.
+//
+// Also, it supports "stable" tests. Stable tests are a special kind of golden
+// test where the input and output are expected to match exactly. This is
+// useful for verifying operations such as formatting or normalization that are
+// meant to be idempotent. Stable test files should have the ".stable" suffix
+// and do not require a separate golden file.
+//
+// When the `-update` flag is set, golden files are overwritten with the output
+// produced by `f`. If the corresponding golden file does not exist, it will be
+// created. For stable tests, the original input file will be overwritten.
+//
+// Example directory structure:
+//
+//	testdata/
+//	  example1.txt
+//	  example1.txt.golden
+//	  example2.txt.stable
+//	  subdir/
+//	    example3.txt
+//	    example3.txt.golden
+//
+// Example usage:
+//
+//	func TestFormat(t *testing.T) {
+//	    golden.Run(t, func(t *testing.T, input []byte) []byte {
+//	        formatted, err := format.Source(input)
+//	        if err != nil {
+//	            t.Fatalf("failed to format Go source: %v", err)
+//	        }
+//	        return formatted
+//	    })
+//	}
+func Run(t *testing.T, f func(t *testing.T, input []byte) []byte) {
 	t.Helper()
-
-	testDir := filepath.Join(baseDir, dir)
-	err := filepath.WalkDir(testDir, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
 		// Skip non-files and golden files
-		if !d.Type().IsRegular() {
+		if !d.Type().IsRegular() || strings.HasSuffix(d.Name(), goldenSuffix) {
 			return nil
 		}
 
-		if strings.HasSuffix(d.Name(), goldenSuffix) {
-			if stable {
-				t.Logf("warning: unexpected golden file %q found in \"stable\" test directory", path)
-			}
-			return nil
-		}
-
-		name, err := filepath.Rel(testDir, path)
+		name, err := filepath.Rel(dir, path)
 		if err != nil {
 			return err
 		}
@@ -121,21 +91,22 @@ func run(t *testing.T, dir string, stable bool, f func(t *testing.T, input []byt
 				t.Fatal(err)
 			}
 
-			actual := f(t, input)
-
-			goldenPath := path
 			expected := input
-			if !stable {
-				goldenPath = goldenPath + goldenSuffix
+			expectedPath := path
 
-				expected, err = os.ReadFile(goldenPath)
+			stable := strings.HasSuffix(path, stableSuffix)
+			if !stable {
+				expectedPath = path + goldenSuffix
+				expected, err = os.ReadFile(expectedPath)
 				if err != nil && !*update {
 					t.Fatalf("missing golden file for %s: %v", path, err)
 				}
 			}
 
+			actual := f(t, input)
+
 			if *update {
-				if err := os.WriteFile(goldenPath, actual, 0644); err != nil {
+				if err := os.WriteFile(expectedPath, actual, 0644); err != nil {
 					t.Fatalf("updating golden file: %v", err)
 				}
 				return
