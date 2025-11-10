@@ -11,7 +11,8 @@ on:
 jobs:
   format:
     name: Formatting
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
@@ -28,7 +29,8 @@ jobs:
 
   vet:
     name: Vet
-    runs-on: ubuntu-latest
+    # runs-on: ubuntu-latest
+    runs-on: [self-hosted, Linux]
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-go@v5
@@ -39,11 +41,12 @@ jobs:
   build:
     name: Build
     needs: [format, vet]
-    runs-on: ${{ matrix.os }}
+    # runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, Linux]
     continue-on-error: true
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # os: [ubuntu-latest, macos-latest, windows-latest]
         go: ["1.24", "1.25"]
     steps:
       - uses: actions/checkout@v5
@@ -55,11 +58,12 @@ jobs:
   test:
     name: Test
     needs: [format, vet]
-    runs-on: ${{ matrix.os }}
+    # runs-on: ${{ matrix.os }}
+    runs-on: [self-hosted, Linux]
     continue-on-error: true
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        # os: [ubuntu-latest, macos-latest, windows-latest]
         go: ["1.24", "1.25"]
     steps:
       - name: Set git to use LF
