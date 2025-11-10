@@ -46,7 +46,7 @@ func renderCmd() *cobra.Command {
 
 			tm, diagnostics := analysis.File(f)
 			if len(diagnostics) > 0 {
-				printDiagnostics(cmd.OutOrStdout(), path, diagnostics)
+				printDiagnostics(path, diagnostics)
 				return nil
 			}
 
@@ -56,7 +56,7 @@ func renderCmd() *cobra.Command {
 				val, ok := c[varname]
 				if ok {
 					if val.Type() != typ {
-						fmt.Fprintf(cmd.OutOrStdout(), "%s: expected %s, got %s\n", varname, typ, val.Type())
+						fmt.Printf("%s: expected %s, got %s\n", varname, typ, val.Type())
 						exit = true
 					}
 				}
@@ -69,7 +69,7 @@ func renderCmd() *cobra.Command {
 			// Variables in context but not in template
 			for varname := range c {
 				if _, ok := tm[varname]; !ok {
-					fmt.Fprintf(cmd.OutOrStdout(), "warning: %s provided but not used\n", varname)
+					fmt.Printf("warning: %s provided but not used\n", varname)
 				}
 			}
 
@@ -78,7 +78,7 @@ func renderCmd() *cobra.Command {
 				return err
 			}
 
-			fmt.Fprint(cmd.OutOrStdout(), string(out))
+			fmt.Printf("%s", out)
 			return nil
 		},
 	}

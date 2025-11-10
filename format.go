@@ -23,7 +23,7 @@ func formatCmd() *cobra.Command {
 
 			f := parser.Source(src)
 			res := format.File(f)
-			fmt.Fprint(cmd.OutOrStdout(), string(res))
+			fmt.Printf("%s", res)
 			return nil
 		},
 	}
