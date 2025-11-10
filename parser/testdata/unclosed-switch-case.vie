@@ -1,0 +1,4 @@
+TOP
+{% switch "" %}
+{% case "" %}
+BOT

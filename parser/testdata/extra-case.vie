@@ -1,0 +1,5 @@
+TOP
+{% switch "" %}
+{% case '' "" %}
+{% end %}
+BOT

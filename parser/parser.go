@@ -34,12 +34,14 @@ func ParseBytes(src []byte) (*ast.File, error) {
 		src:        src,
 	}
 
-	p.GotoFirstChild()
+	var f ast.File
+	if !p.GotoFirstChild() {
+		return &f, nil
+	}
 	defer p.GotoParent()
 
-	var f ast.File
 	for {
-		stmt := p.stmt()
+		stmt := p.parseStmt()
 		if stmt != nil {
 			f.Stmts = append(f.Stmts, stmt)
 		}
@@ -50,18 +52,26 @@ func ParseBytes(src []byte) (*ast.File, error) {
 	return &f, nil
 }
 
-func (p parser) stmt() ast.Stmt {
+func (p parser) parseStmt() ast.Stmt {
 	n := p.Node()
+	if n.IsMissing() {
+		panic(fmt.Sprintf("parser: unexpected MISSING stmt %s", n.Kind()))
+	}
+	if n.IsError() {
+		return &ast.BadStmt{
+			From: posFromTsPoint(n.StartPosition()),
+			To:   posFromTsPoint(n.EndPosition()),
+		}
+	}
 	// TODO(skewb1k): use KindId instead of string comparisons.
 	switch n.Kind() {
 	case "text":
 		b := p.src[n.StartByte():n.EndByte()]
-		// TODO(skewb1k): improve perf.
+
+		// TODO(skewb1k): improve performace.
 		b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
 		b = bytes.ReplaceAll(b, []byte("\r"), []byte("\n"))
-		if len(b) == 0 {
-			return nil
-		}
+
 		// TODO(skewb1k): factor out to parser.Peek().
 		if p.GotoNextSibling() {
 			// Trim trail spaces and tabs up to and including the first newline
@@ -89,28 +99,46 @@ func (p parser) stmt() ast.Stmt {
 
 		p.GotoNextSibling() // '{#'
 		// handle `{##}`
-		if p.Node().Kind() == "comment" {
+		commentNode := p.Node()
+		if commentNode.IsError() {
+			return &ast.BadStmt{
+				From: posFromTsPoint(n.StartPosition()),
+				// TODO(skewb1k): include final '#}' in the range.
+				To: posFromTsPoint(commentNode.EndPosition()),
+			}
+		}
+		if commentNode.Kind() == "comment" {
 			comment.Content = p.nodeContent(p.Node())
 		}
 		return &comment
 
 	case "render":
+		var renderStmt ast.RenderStmt
 		p.GotoFirstChild()
 		defer p.GotoParent()
 
 		p.GotoNextSibling() // '{{'
-
-		return &ast.RenderStmt{
-			X: p.expr(),
+		renderStmt.X = p.parseExpr()
+		p.GotoNextSibling() // '<expr>'
+		// handle unexpected expression after first one
+		// i.e. {{ "" "" }}
+		nn := p.Node()
+		if nn.IsError() {
+			renderStmt.X = &ast.BadExpr{
+				From: posFromTsPoint(nn.StartPosition()),
+				To:   posFromTsPoint(nn.EndPosition()),
+			}
 		}
+		return &renderStmt
 
 	case "if_tag":
+		bad := false
 		var ifStmt ast.IfStmt
 		p.GotoFirstChild()
 
 		p.GotoNextSibling() // '{%'
 		p.GotoNextSibling() // 'if'
-		ifStmt.Cond = p.expr()
+		ifStmt.Cond = p.parseExpr()
 		p.GotoParent()
 
 		for p.GotoNextSibling() {
@@ -122,7 +150,18 @@ func (p parser) stmt() ast.Stmt {
 				p.GotoNextSibling() // '{%'
 				p.GotoNextSibling() // 'else'
 				p.GotoNextSibling() // 'if'
-				elseIf.Cond = p.expr()
+				elseIf.Cond = p.parseExpr()
+				from := p.Node().StartPosition()
+				p.GotoNextSibling() // '<expr>'
+				// handle unexpected expression after first one
+				// i.e. {% else if "" "" %}
+				nn := p.Node()
+				if nn.IsError() {
+					elseIf.Cond = &ast.BadExpr{
+						From: posFromTsPoint(from),
+						To:   posFromTsPoint(nn.EndPosition()),
+					}
+				}
 				p.GotoParent()
 
 				for p.GotoNextSibling() {
@@ -131,7 +170,7 @@ func (p parser) stmt() ast.Stmt {
 						p.GotoPreviousSibling()
 						break
 					}
-					stmt := p.stmt()
+					stmt := p.parseStmt()
 					if stmt != nil {
 						elseIf.Cons = append(elseIf.Cons, stmt)
 					}
@@ -144,6 +183,11 @@ func (p parser) stmt() ast.Stmt {
 
 				p.GotoNextSibling() // '{%'
 				p.GotoNextSibling() // 'else'
+				// handle unexpected expression after else
+				// i.e. {% else "" %}
+				if p.Node().IsError() {
+					bad = true
+				}
 				p.GotoParent()
 
 				for p.GotoNextSibling() {
@@ -151,7 +195,7 @@ func (p parser) stmt() ast.Stmt {
 						p.GotoPreviousSibling()
 						break
 					}
-					stmt := p.stmt()
+					stmt := p.parseStmt()
 					if stmt != nil {
 						elseClause.Cons = append(elseClause.Cons, stmt)
 					}
@@ -159,24 +203,36 @@ func (p parser) stmt() ast.Stmt {
 				ifStmt.Else = &elseClause
 
 			case "end_tag":
+				if bad {
+					return &ast.BadStmt{
+						From: posFromTsPoint(n.StartPosition()),
+						To:   posFromTsPoint(p.Node().EndPosition()),
+					}
+				}
 				return &ifStmt
 
 			default:
-				stmt := p.stmt()
+				stmt := p.parseStmt()
 				if stmt != nil {
 					ifStmt.Cons = append(ifStmt.Cons, stmt)
 				}
 			}
 		}
-		panic("parser: unexpected EOF while parsing If statement")
+		// TODO(skewb1k): restore TSCursor to the last valid node rather than
+		// advancing to EOF when an end_tag is missing.
+		return &ast.BadStmt{
+			From: posFromTsPoint(n.StartPosition()),
+			To:   posFromTsPoint(p.Node().EndPosition()),
+		}
 
 	case "switch_tag":
+		bad := false
 		var switchStmt ast.SwitchStmt
 		p.GotoFirstChild()
 
 		p.GotoNextSibling() // '{%'
 		p.GotoNextSibling() // 'switch'
-		switchStmt.Value = p.expr()
+		switchStmt.Value = p.parseExpr()
 		p.GotoParent()
 
 		for p.GotoNextSibling() {
@@ -187,7 +243,17 @@ func (p parser) stmt() ast.Stmt {
 
 				p.GotoNextSibling() // '{%'
 				p.GotoNextSibling() // 'case'
-				caseClause.List = p.exprList()
+				caseClause.List = p.parseExprList()
+				p.GotoNextSibling() // '<expr-list>'
+				// handle unexpected expression after the expr-list
+				// i.e. {% case "" "" %}
+				nn := p.Node()
+				if nn.IsError() {
+					caseClause.List = append(caseClause.List, &ast.BadExpr{
+						From: posFromTsPoint(nn.StartPosition()),
+						To:   posFromTsPoint(nn.EndPosition()),
+					})
+				}
 				p.GotoParent()
 
 				for p.GotoNextSibling() {
@@ -196,7 +262,7 @@ func (p parser) stmt() ast.Stmt {
 						p.GotoPreviousSibling()
 						break
 					}
-					stmt := p.stmt()
+					stmt := p.parseStmt()
 					if stmt != nil {
 						caseClause.Body = append(caseClause.Body, stmt)
 					}
@@ -204,24 +270,47 @@ func (p parser) stmt() ast.Stmt {
 				switchStmt.Cases = append(switchStmt.Cases, caseClause)
 
 			case "end_tag":
+				if bad {
+					return &ast.BadStmt{
+						From: posFromTsPoint(n.StartPosition()),
+						To:   posFromTsPoint(p.Node().EndPosition()),
+					}
+				}
 				return &switchStmt
 
 			case "text":
 				// TODO(skewb1k): allow only whitespaces.
 
 			default:
-				panic(fmt.Sprintf("parser: unexpected tag when parsing switch kind %s", p.Node().Kind()))
+				bad = true
 			}
 		}
-		panic("parser: unexpected EOF when parsing switch_tag")
+		// TODO(skewb1k): restore TSCursor to the last valid node rather than
+		// advancing to EOF when an end_tag is missing.
+		return &ast.BadStmt{
+			From: posFromTsPoint(n.StartPosition()),
+			To:   posFromTsPoint(n.EndPosition()),
+		}
+
+	case "end_tag", "case_tag":
+		return &ast.BadStmt{
+			From: posFromTsPoint(n.StartPosition()),
+			To:   posFromTsPoint(n.EndPosition()),
+		}
 
 	default:
-		panic(fmt.Sprintf("parser: unexpected stmt kind %s", n.Kind()))
+		panic(fmt.Sprintf("parser: unexpected stmt kind %s while parsing %q", n.Kind(), p.src))
 	}
 }
 
-func (p parser) expr() ast.Expr {
+func (p parser) parseExpr() ast.Expr {
 	n := p.Node()
+	if n.IsError() || n.IsMissing() {
+		return &ast.BadExpr{
+			From: posFromTsPoint(n.StartPosition()),
+			To:   posFromTsPoint(n.EndPosition()),
+		}
+	}
 	switch n.Kind() {
 	case "string_literal":
 		return &ast.BasicLit{
@@ -248,12 +337,12 @@ func (p parser) expr() ast.Expr {
 		defer p.GotoParent()
 		var unary ast.UnaryExpr
 
-		n := p.Node()
-		unary.OpPos = posFromTsPoint(n.StartPosition())
-		unary.Op = ast.ParseUnOpKind(string(p.nodeContent(n)))
+		nn := p.Node()
+		unary.OpPos = posFromTsPoint(nn.StartPosition())
+		unary.Op = ast.ParseUnOpKind(string(p.nodeContent(nn)))
 
 		p.GotoNextSibling()
-		unary.X = p.expr()
+		unary.X = p.parseExpr()
 
 		return &unary
 
@@ -262,13 +351,13 @@ func (p parser) expr() ast.Expr {
 		defer p.GotoParent()
 		var binary ast.BinaryExpr
 
-		binary.X = p.expr()
+		binary.X = p.parseExpr()
 
 		p.GotoNextSibling()
 		binary.Op = ast.ParseBinOpKind(string(p.nodeContent(p.Node())))
 
 		p.GotoNextSibling()
-		binary.Y = p.expr()
+		binary.Y = p.parseExpr()
 
 		return &binary
 
@@ -277,14 +366,14 @@ func (p parser) expr() ast.Expr {
 		defer p.GotoParent()
 		var call ast.CallExpr
 
-		n := p.Node()
+		nn := p.Node()
 		call.Func = ast.Ident{
-			NamePos: posFromTsPoint(n.StartPosition()),
-			Name:    p.nodeContent(n),
+			NamePos: posFromTsPoint(nn.StartPosition()),
+			Name:    p.nodeContent(nn),
 		}
 		p.GotoNextSibling()
 
-		call.Args = p.exprList()
+		call.Args = p.parseExprList()
 		return &call
 
 	case "pipe_expression":
@@ -292,7 +381,7 @@ func (p parser) expr() ast.Expr {
 		defer p.GotoParent()
 		var pipe ast.PipeExpr
 
-		pipe.Arg = p.expr()
+		pipe.Arg = p.parseExpr()
 
 		p.GotoNextSibling() // '|'
 
@@ -309,22 +398,22 @@ func (p parser) expr() ast.Expr {
 		paren.Lparen = posFromTsPoint(p.Node().StartPosition())
 		p.GotoNextSibling()
 
-		paren.X = p.expr()
+		paren.X = p.parseExpr()
 		return &paren
 
 	default:
-		panic(fmt.Sprintf("parser: unexpected expr kind %s", n.Kind()))
+		panic(fmt.Sprintf("parser: unexpected expr kind %s while parsing %q", n.Kind(), p.src))
 	}
 }
 
-func (p parser) exprList() []ast.Expr {
+func (p parser) parseExprList() []ast.Expr {
 	p.GotoFirstChild()
 	defer p.GotoParent()
 
 	var list []ast.Expr
 	for {
 		if p.Node().IsNamed() {
-			list = append(list, p.expr())
+			list = append(list, p.parseExpr())
 		}
 		if !p.GotoNextSibling() {
 			break

@@ -1,0 +1,5 @@
+TOP
+{% if true %}
+{% else if %}
+{% end %}
+BOT
