@@ -1,0 +1,7 @@
+{% if a %}
+{% end %}
+
+{% if a or true %}
+{% end %}
+
+{{ a }}

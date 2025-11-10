@@ -62,6 +62,89 @@ func TestTypes(t *testing.T) {
 				"g": TypeBool,
 			},
 		},
+		"parens": {
+			types: map[string]Type{
+				"a": TypeString,
+				"b": TypeString,
+			},
+		},
+		"concatenate-bool-str": {
+			types: map[string]Type{},
+			diagnostics: []Diagnostic{
+				&WrongUsage{
+					ExpectedType: TypeString,
+					GotType:      TypeBool,
+					_Pos: ast.Pos{
+						Line:      0,
+						Character: 8,
+					},
+				},
+			},
+		},
+		"non-bool-if": {
+			types: map[string]Type{},
+			diagnostics: []Diagnostic{
+				&WrongUsage{
+					ExpectedType: TypeBool,
+					GotType:      TypeString,
+					_Pos: ast.Pos{
+						Line:      0,
+						Character: 6,
+					},
+				},
+			},
+		},
+		"cross-var": {
+			types: map[string]Type{},
+			diagnostics: []Diagnostic{
+				&CrossVarTyping{
+					X: VarType("a"),
+					Y: VarType("b"),
+					_Pos: ast.Pos{
+						Line:      0,
+						Character: 6,
+					},
+				},
+			},
+		},
+		"multiple-usages": {
+			types: map[string]Type{
+				"a": TypeBool,
+			},
+			diagnostics: []Diagnostic{
+				&WrongUsage{
+					ExpectedType: TypeBool,
+					GotType:      TypeString,
+					_Pos: ast.Pos{
+						Line:      6,
+						Character: 3,
+					},
+				},
+			},
+		},
+		"equal-usages": {
+			types: map[string]Type{
+				"a": TypeString,
+			},
+			diagnostics: []Diagnostic{
+				&WrongUsage{
+					ExpectedType: TypeString,
+					GotType:      TypeBool,
+					_Pos: ast.Pos{
+						Line:      0,
+						Character: 6,
+					},
+				},
+				&WrongUsage{
+					ExpectedType: TypeString,
+					GotType:      TypeBool,
+					_Pos: ast.Pos{
+						Line:      5,
+						Character: 6,
+					},
+				},
+			},
+		},
 	}
 
 	for _, e := range entries {

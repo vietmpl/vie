@@ -7,41 +7,53 @@ import (
 	"github.com/vietmpl/vie/value"
 )
 
+type VarType string
+
+func (vt VarType) String() string {
+	return string(vt)
+}
+
 type analyzer struct {
-	tm          map[string]*[value.TypeString + 1]uint
+	usages      map[string][]Usage
 	diagnostics []Diagnostic
 }
 
-func newAnalyzer() *analyzer {
-	return &analyzer{
-		tm: make(map[string]*[value.TypeString + 1]uint),
-	}
-}
-
-func (a *analyzer) addType(name string, typ value.Type) {
-	if a.tm[name] == nil {
-		a.tm[name] = new([value.TypeString + 1]uint)
-	}
-
-	a.tm[name][typ]++
+func (a *analyzer) addUsage(varName string, u Usage) {
+	a.usages[varName] = append(a.usages[varName], u)
 }
 
 func File(file *ast.File) (map[string]value.Type, []Diagnostic) {
-	a := newAnalyzer()
+	a := analyzer{
+		usages: make(map[string][]Usage),
+	}
 	a.stmts(file.Stmts)
 
-	types := make(map[string]value.Type, len(a.tm))
-	for varname, usages := range a.tm {
-		var maxCount uint
+	types := make(map[string]value.Type, len(a.usages))
+	for name, uses := range a.usages {
+		var typeCount [value.TypeFunction]uint
+		for _, u := range uses {
+			typeCount[u.Type]++
+		}
+
 		var maxType value.Type
-		for t, count := range usages {
-			if count > maxCount {
-				maxCount = count
-				maxType = value.Type(t)
+		var maxCount uint
+		for t, c := range typeCount {
+			if c > maxCount {
+				maxType, maxCount = value.Type(t), c
 			}
 		}
-		types[varname] = maxType
-		// TODO: report wrong usages diagnostics
+
+		types[name] = maxType
+
+		for _, u := range uses {
+			if u.Type != maxType {
+				a.diagnostics = append(a.diagnostics, &WrongUsage{
+					ExpectedType: maxType,
+					GotType:      u.Type,
+					_Pos:         u.Pos,
+				})
+			}
+		}
 	}
 	return types, a.diagnostics
 }
@@ -50,22 +62,70 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 	for _, s := range stmts {
 		switch n := s.(type) {
 		case *ast.Text:
-
+			// Skip
 		case *ast.RenderStmt:
-			a.expr(n.X, value.TypeString)
+			x := a.expr(n.X)
+			switch xx := x.(type) {
+			case value.Type:
+				if xx != value.TypeString {
+					a.diagnostics = append(a.diagnostics, &WrongUsage{
+						ExpectedType: value.TypeString,
+						GotType:      xx,
+						_Pos:         n.X.Pos(),
+					})
+				}
+			case VarType:
+				a.addUsage(xx.String(), Usage{
+					Type: value.TypeString,
+					Kind: UsageKindRender,
+					Pos:  n.X.Pos(),
+				})
+			}
 
 		case *ast.IfStmt:
-			a.expr(n.Cond, value.TypeBool)
+			cond := a.expr(n.Cond)
+			switch condx := cond.(type) {
+			case value.Type:
+				if condx != value.TypeBool {
+					a.diagnostics = append(a.diagnostics, &WrongUsage{
+						ExpectedType: value.TypeBool,
+						GotType:      condx,
+						_Pos:         n.Cond.Pos(),
+					})
+				}
+			case VarType:
+				a.addUsage(condx.String(), Usage{
+					Type: value.TypeBool,
+					Kind: UsageKindIf,
+					Pos:  n.Cond.Pos(),
+				})
+			}
 			a.stmts(n.Cons)
 			for _, elseIfClause := range n.ElseIfs {
-				a.expr(elseIfClause.Cond, value.TypeBool)
+				elseIfCond := a.expr(elseIfClause.Cond)
+				switch elseIfCondx := elseIfCond.(type) {
+				case value.Type:
+					if elseIfCondx != value.TypeBool {
+						a.diagnostics = append(a.diagnostics, &WrongUsage{
+							ExpectedType: value.TypeBool,
+							GotType:      elseIfCondx,
+							_Pos:         elseIfClause.Cond.Pos(),
+						})
+					}
+				case VarType:
+					a.addUsage(elseIfCondx.String(), Usage{
+						Type: value.TypeBool,
+						Kind: UsageKindIf,
+						Pos:  elseIfClause.Cond.Pos(),
+					})
+				}
 				a.stmts(elseIfClause.Cons)
 			}
 			if n.Else != nil {
 				a.stmts(n.Else.Cons)
 			}
 
-		case *ast.SwitchStmt:
+		// case *ast.SwitchStmt:
 
 		default:
 			panic(fmt.Sprintf("analyzer: unexpected stmt type %T", s))
@@ -73,46 +133,87 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 	}
 }
 
-func (a *analyzer) expr(e ast.Expr, typ value.Type) {
+func (a *analyzer) expr(e ast.Expr) any {
 	switch n := e.(type) {
 	case *ast.BasicLit:
-		var got value.Type
 		switch n.Kind {
 		case ast.KindBool:
-			got = value.TypeBool
+			return value.TypeBool
 		case ast.KindString:
-			got = value.TypeString
+			return value.TypeString
 		default:
 			panic(fmt.Sprintf("analyzer: unexpected BasicLit kind %d", n.Kind))
 		}
 
-		if got != typ {
-			a.diagnostics = append(a.diagnostics, &WrongUsage{
-				ExpectedType: typ,
-				GotType:      got,
-				_Pos:         n.Pos(),
-			})
-		}
-
 	case *ast.Ident:
-		a.addType(string(n.Name), typ)
+		return VarType(n.Name)
 
 	case *ast.UnaryExpr:
+		x := a.expr(n.X)
 		// The '!' and 'not' operators can only be applied to boolean values
-		a.expr(n.X, value.TypeBool)
+		return x
 
 	case *ast.BinaryExpr:
 		switch n.Op {
 		case ast.BinOpKindConcat:
-			a.expr(n.X, value.TypeString)
-			a.expr(n.Y, value.TypeString)
+			x := a.expr(n.X)
+			a.expectOperandType(x, n.X.Pos(), value.TypeString)
+
+			y := a.expr(n.Y)
+			a.expectOperandType(y, n.Y.Pos(), value.TypeString)
+			return value.TypeString
+
 		case
 			ast.BinOpKindEq,
 			ast.BinOpKindNeq,
 			ast.BinOpKindIs,
-			ast.BinOpKindIsNot,
+			ast.BinOpKindIsNot:
 
-			ast.BinOpKindGtr,
+			x := a.expr(n.X)
+			y := a.expr(n.Y)
+			// TODO(skewb1k): refactor.
+			switch xx := x.(type) {
+			case value.Type:
+				switch yy := y.(type) {
+				// <lit> is <lit>
+				case value.Type:
+					// catch `false is "str"`
+					if xx != yy {
+						a.diagnostics = append(a.diagnostics, &InvalidOperation{
+							X:    xx,
+							Y:    yy,
+							_Pos: n.Pos(),
+						})
+					}
+				// <lit> is <var>
+				case VarType:
+					a.addUsage(yy.String(), Usage{
+						Type: xx,
+						Kind: UsageKindBinop,
+						Pos:  n.Pos(),
+					})
+				}
+			case VarType:
+				switch yy := y.(type) {
+				// <var> is <lit>
+				case value.Type:
+					a.addUsage(xx.String(), Usage{
+						Type: yy,
+						Kind: UsageKindBinop,
+						Pos:  n.Pos(),
+					})
+				// <var> is <var>
+				case VarType:
+					a.diagnostics = append(a.diagnostics, &CrossVarTyping{
+						X:    xx,
+						Y:    yy,
+						_Pos: n.Pos(),
+					})
+				}
+			}
+			return value.TypeBool
+
+		case ast.BinOpKindGtr,
 			ast.BinOpKindGeq,
 			ast.BinOpKindLss,
 			ast.BinOpKindLeq,
@@ -120,17 +221,44 @@ func (a *analyzer) expr(e ast.Expr, typ value.Type) {
 			ast.BinOpKindLOr,
 			ast.BinOpKindAnd,
 			ast.BinOpKindOr:
-			a.expr(n.X, value.TypeBool)
-			a.expr(n.Y, value.TypeBool)
+
+			x := a.expr(n.X)
+			a.expectOperandType(x, n.X.Pos(), value.TypeBool)
+
+			y := a.expr(n.Y)
+			a.expectOperandType(y, n.Y.Pos(), value.TypeBool)
+			return value.TypeBool
+
+		default:
+			panic(fmt.Sprintf("analyzer: unexpected BinOpKind: %T", e))
 		}
 
 	case *ast.ParenExpr:
-		a.expr(n.X, typ)
+		return a.expr(n.X)
 
-	case *ast.CallExpr:
-	case *ast.PipeExpr:
+	// case *ast.CallExpr:
+	// case *ast.PipeExpr:
 
 	default:
 		panic(fmt.Sprintf("analyzer: unexpected expr type %T", e))
+	}
+}
+
+func (a *analyzer) expectOperandType(x any, pos ast.Pos, typ value.Type) {
+	switch xx := x.(type) {
+	case value.Type:
+		if xx != typ {
+			a.diagnostics = append(a.diagnostics, &WrongUsage{
+				ExpectedType: typ,
+				GotType:      xx,
+				_Pos:         pos,
+			})
+		}
+	case VarType:
+		a.addUsage(xx.String(), Usage{
+			Type: typ,
+			Kind: UsageKindBinop,
+			Pos:  pos,
+		})
 	}
 }

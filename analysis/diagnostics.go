@@ -27,28 +27,42 @@ func (d *WrongUsage) Pos() ast.Pos {
 }
 
 type InvalidOperation struct {
-	Typ1 value.Type
-	Typ2 value.Type
+	X    value.Type
+	Y    value.Type
 	_Pos ast.Pos
 }
 
 func (d *InvalidOperation) String() string {
 	// TODO: print entire invalid expression (like Go).
-	return fmt.Sprintf("invalid operation: mismatched types %s and %s", d.Typ1, d.Typ2)
+	return fmt.Sprintf("invalid operation: mismatched types %s and %s", d.X, d.Y)
 }
 
 func (d *InvalidOperation) Pos() ast.Pos {
 	return d._Pos
 }
 
-type NonBoolealInIf struct {
+// type NonBoolealInIf struct {
+// 	_Pos ast.Pos
+// }
+//
+// func (d *NonBoolealInIf) String() string {
+// 	return "non-boolean condition in if statement"
+// }
+//
+// func (d *NonBoolealInIf) Pos() ast.Pos {
+// 	return d._Pos
+// }
+
+type CrossVarTyping struct {
+	X    VarType
+	Y    VarType
 	_Pos ast.Pos
 }
 
-func (d *NonBoolealInIf) String() string {
-	return "non-boolean condition in if statement"
+func (d *CrossVarTyping) String() string {
+	return fmt.Sprintf("type of %s depends on type of %s (cross-var typing is not supported yet)", d.X, d.Y)
 }
 
-func (d *NonBoolealInIf) Pos() ast.Pos {
+func (d *CrossVarTyping) Pos() ast.Pos {
 	return d._Pos
 }
