@@ -10,8 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Populated by goreleaser during build
-var version = "unknown"
+var version = "v0.0.1"
 
 func main() {
 	root := &cobra.Command{
@@ -33,7 +32,7 @@ func main() {
 		root,
 		fang.WithVersion(root.Version),
 		fang.WithErrorHandler(func(w io.Writer, _ fang.Styles, err error) {
-			_, _ = fmt.Fprintln(w, "vie:", err)
+			_, _ = fmt.Fprintln(w, err)
 		}),
 		fang.WithColorSchemeFunc(fang.AnsiColorScheme),
 	); err != nil {
