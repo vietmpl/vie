@@ -34,7 +34,7 @@ func TestTypes(t *testing.T) {
 				"b":    TypeString,
 			},
 			diagnostics: []Diagnostic{
-				&WrongUsage{
+				WrongUsage{
 					WantType: TypeString,
 					GotType:  TypeBool,
 					Pos_: ast.Pos{
@@ -72,7 +72,7 @@ func TestTypes(t *testing.T) {
 		"concatenate-bool-str": {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
-				&WrongUsage{
+				WrongUsage{
 					WantType: TypeString,
 					GotType:  TypeBool,
 					Pos_: ast.Pos{
@@ -85,7 +85,7 @@ func TestTypes(t *testing.T) {
 		"non-bool-if": {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
-				&WrongUsage{
+				WrongUsage{
 					WantType: TypeBool,
 					GotType:  TypeString,
 					Pos_: ast.Pos{
@@ -98,7 +98,7 @@ func TestTypes(t *testing.T) {
 		"non-bool-not": {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
-				&WrongUsage{
+				WrongUsage{
 					WantType: TypeBool,
 					GotType:  TypeString,
 					Pos_: ast.Pos{
@@ -111,7 +111,7 @@ func TestTypes(t *testing.T) {
 		"cross-var": {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
-				&CrossVarTyping{
+				CrossVarTyping{
 					X: VarType("a"),
 					Y: VarType("b"),
 					Pos_: ast.Pos{
@@ -126,7 +126,7 @@ func TestTypes(t *testing.T) {
 				"a": TypeBool,
 			},
 			diagnostics: []Diagnostic{
-				&WrongUsage{
+				WrongUsage{
 					WantType: TypeString,
 					GotType:  TypeBool,
 					Pos_: ast.Pos{
@@ -141,7 +141,7 @@ func TestTypes(t *testing.T) {
 				"a": TypeString,
 			},
 			diagnostics: []Diagnostic{
-				&WrongUsage{
+				WrongUsage{
 					WantType: TypeBool,
 					GotType:  TypeString,
 					Pos_: ast.Pos{
@@ -149,7 +149,7 @@ func TestTypes(t *testing.T) {
 						Character: 6,
 					},
 				},
-				&WrongUsage{
+				WrongUsage{
 					WantType: TypeBool,
 					GotType:  TypeString,
 					Pos_: ast.Pos{
@@ -172,7 +172,7 @@ func TestTypes(t *testing.T) {
 		"incorrect-arg-count": {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
-				&IncorrectArgCount{
+				IncorrectArgCount{
 					FuncName: "@upper",
 					Want:     1,
 					Got:      2,
@@ -186,7 +186,7 @@ func TestTypes(t *testing.T) {
 		"incorrect-arg-count-with-var": {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
-				&IncorrectArgCount{
+				IncorrectArgCount{
 					FuncName: "@upper",
 					Want:     1,
 					Got:      2,
@@ -200,7 +200,7 @@ func TestTypes(t *testing.T) {
 		"func-not-found": {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
-				&BuiltinNotFound{
+				BuiltinNotFound{
 					Name: "@undefined_func",
 					Msg:  "function @undefined_func is undefined",
 					Pos_: ast.Pos{
@@ -213,7 +213,7 @@ func TestTypes(t *testing.T) {
 		"call-undefined": {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
-				&BuiltinNotFound{
+				BuiltinNotFound{
 					Name: "@undefined_func",
 					Msg:  "function @undefined_func is undefined",
 					Pos_: ast.Pos{
@@ -226,7 +226,7 @@ func TestTypes(t *testing.T) {
 		"wrong-use-call-undefined": {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
-				&BuiltinNotFound{
+				BuiltinNotFound{
 					Name: "@undefined_func",
 					Msg:  "function @undefined_func is undefined",
 					Pos_: ast.Pos{

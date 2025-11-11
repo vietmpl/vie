@@ -18,11 +18,11 @@ type WrongUsage struct {
 	Pos_     ast.Pos
 }
 
-func (d *WrongUsage) String() string {
+func (d WrongUsage) String() string {
 	return fmt.Sprintf("cannot use %s as %s", d.GotType, d.WantType)
 }
 
-func (d *WrongUsage) Pos() ast.Pos {
+func (d WrongUsage) Pos() ast.Pos {
 	return d.Pos_
 }
 
@@ -32,12 +32,12 @@ type InvalidOperation struct {
 	Pos_ ast.Pos
 }
 
-func (d *InvalidOperation) String() string {
+func (d InvalidOperation) String() string {
 	// TODO(skewb1k): print entire invalid expression (like Go).
 	return fmt.Sprintf("invalid operation: mismatched types %s and %s", d.X, d.Y)
 }
 
-func (d *InvalidOperation) Pos() ast.Pos {
+func (d InvalidOperation) Pos() ast.Pos {
 	return d.Pos_
 }
 
@@ -47,11 +47,11 @@ type CrossVarTyping struct {
 	Pos_ ast.Pos
 }
 
-func (d *CrossVarTyping) String() string {
+func (d CrossVarTyping) String() string {
 	return fmt.Sprintf("type of %s depends on type of %s (cross-var typing is not supported yet)", d.X, d.Y)
 }
 
-func (d *CrossVarTyping) Pos() ast.Pos {
+func (d CrossVarTyping) Pos() ast.Pos {
 	return d.Pos_
 }
 
@@ -61,11 +61,11 @@ type BuiltinNotFound struct {
 	Pos_ ast.Pos
 }
 
-func (d *BuiltinNotFound) String() string {
+func (d BuiltinNotFound) String() string {
 	return d.Msg
 }
 
-func (d *BuiltinNotFound) Pos() ast.Pos {
+func (d BuiltinNotFound) Pos() ast.Pos {
 	return d.Pos_
 }
 
@@ -76,10 +76,10 @@ type IncorrectArgCount struct {
 	Pos_     ast.Pos
 }
 
-func (d *IncorrectArgCount) String() string {
+func (d IncorrectArgCount) String() string {
 	return fmt.Sprintf("function %q expects %d argument(s), but %d were provided", d.FuncName, d.Want, d.Got)
 }
 
-func (d *IncorrectArgCount) Pos() ast.Pos {
+func (d IncorrectArgCount) Pos() ast.Pos {
 	return d.Pos_
 }

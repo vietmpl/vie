@@ -17,6 +17,10 @@ func (a *analyzer) addUsage(varName string, u Usage) {
 	a.usages[varName] = append(a.usages[varName], u)
 }
 
+func (a *analyzer) addDiagnostic(d Diagnostic) {
+	a.diagnostics = append(a.diagnostics, d)
+}
+
 func CheckFile(file *ast.File) (map[string]value.Type, []Diagnostic) {
 	a := analyzer{
 		usages: make(map[string][]Usage),
@@ -43,7 +47,7 @@ func CheckFile(file *ast.File) (map[string]value.Type, []Diagnostic) {
 		// report mismatched usages
 		for _, u := range uses {
 			if u.Type != maxType {
-				a.diagnostics = append(a.diagnostics, &WrongUsage{
+				a.addDiagnostic(WrongUsage{
 					WantType: u.Type,
 					GotType:  maxType,
 					Pos_:     u.Pos,
@@ -71,7 +75,7 @@ func (a *analyzer) checkStmt(stmt ast.Stmt) {
 			return
 		case value.Type:
 			if xx != value.TypeString {
-				a.diagnostics = append(a.diagnostics, &WrongUsage{
+				a.addDiagnostic(WrongUsage{
 					WantType: value.TypeString,
 					GotType:  xx,
 					Pos_:     s.X.Pos(),
@@ -92,7 +96,7 @@ func (a *analyzer) checkStmt(stmt ast.Stmt) {
 			return
 		case value.Type:
 			if condx != value.TypeBool {
-				a.diagnostics = append(a.diagnostics, &WrongUsage{
+				a.addDiagnostic(WrongUsage{
 					WantType: value.TypeBool,
 					GotType:  condx,
 					Pos_:     s.Cond.Pos(),
@@ -113,7 +117,7 @@ func (a *analyzer) checkStmt(stmt ast.Stmt) {
 				return
 			case value.Type:
 				if elseIfCondx != value.TypeBool {
-					a.diagnostics = append(a.diagnostics, &WrongUsage{
+					a.addDiagnostic(WrongUsage{
 						WantType: value.TypeBool,
 						GotType:  elseIfCondx,
 						Pos_:     elseIfClause.Cond.Pos(),
@@ -208,7 +212,7 @@ func (a *analyzer) checkExpr(expr ast.Expr) any {
 				case value.Type:
 					// catch `false is "str"`
 					if xx != yy {
-						a.diagnostics = append(a.diagnostics, &InvalidOperation{
+						a.addDiagnostic(InvalidOperation{
 							X:    xx,
 							Y:    yy,
 							Pos_: e.Pos(),
@@ -233,7 +237,7 @@ func (a *analyzer) checkExpr(expr ast.Expr) any {
 					})
 				// <var> is <var>
 				case VarType:
-					a.diagnostics = append(a.diagnostics, &CrossVarTyping{
+					a.addDiagnostic(CrossVarTyping{
 						X:    xx,
 						Y:    yy,
 						Pos_: e.Pos(),
@@ -290,7 +294,7 @@ func (a *analyzer) checkExpr(expr ast.Expr) any {
 func (a *analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
 	fn, err := builtin.LookupFunction(ident)
 	if err != nil {
-		a.diagnostics = append(a.diagnostics, &BuiltinNotFound{
+		a.addDiagnostic(BuiltinNotFound{
 			Name: ident.Name,
 			Msg:  err.Error(),
 			Pos_: ident.Pos(),
@@ -299,7 +303,7 @@ func (a *analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
 	}
 	// TODO(skewb1k): improve error messages for PipeExpr.
 	if len(exprs) != len(fn.ArgTypes) {
-		a.diagnostics = append(a.diagnostics, &IncorrectArgCount{
+		a.addDiagnostic(IncorrectArgCount{
 			FuncName: ident.Name,
 			Got:      len(exprs),
 			Want:     len(fn.ArgTypes),
@@ -342,7 +346,7 @@ func (a *analyzer) expectType(x any, u Usage) {
 	switch xx := x.(type) {
 	case value.Type:
 		if xx != u.Type {
-			a.diagnostics = append(a.diagnostics, &WrongUsage{
+			a.addDiagnostic(WrongUsage{
 				WantType: u.Type,
 				GotType:  xx,
 				Pos_:     u.Pos,
