@@ -37,7 +37,10 @@ func renderCmd() *cobra.Command {
 				return err
 			}
 
-			f := parser.Source(src)
+			f, err := parser.ParseBytes(src)
+			if err != nil {
+				return err
+			}
 
 			c, err := parseContext(args[1:])
 			if err != nil {

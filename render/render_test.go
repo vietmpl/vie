@@ -44,13 +44,16 @@ func TestSource(t *testing.T) {
 	golden.Run(t, func(t *testing.T, input []byte) []byte {
 		t.Parallel()
 
-		f := parser.Source(input)
+		f, err := parser.ParseBytes(input)
+		if err != nil {
+			t.Fatal(err)
+		}
 
 		name := strings.TrimPrefix(t.Name(), "TestSource/")
 		context := cases[name].context
 
-		var b bytes.Buffer
-		render.MustRenderFile(&b, f, context)
-		return b.Bytes()
+		var buf bytes.Buffer
+		render.MustRenderFile(&buf, f, context)
+		return buf.Bytes()
 	})
 }

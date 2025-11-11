@@ -250,9 +250,12 @@ func TestTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			sf := parser.Source(input)
+			f, err := parser.ParseBytes(input)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-			actualTypes, actualDiagnostics := File(sf)
+			actualTypes, actualDiagnostics := File(f)
 
 			assert.Equal(t, cases[name], testCase{
 				types:       actualTypes,

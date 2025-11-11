@@ -26,7 +26,10 @@ func formatCmd() *cobra.Command {
 				return err
 			}
 
-			f := parser.Source(src)
+			f, err := parser.ParseBytes(src)
+			if err != nil {
+				return err
+			}
 
 			var buf bytes.Buffer
 			if err := format.FormatFile(&buf, f); err != nil {

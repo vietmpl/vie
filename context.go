@@ -28,7 +28,10 @@ func contextCmd() *cobra.Command {
 				return err
 			}
 
-			f := parser.Source(src)
+			f, err := parser.ParseBytes(src)
+			if err != nil {
+				return err
+			}
 
 			tm, diagnostics := analysis.File(f)
 			if len(diagnostics) > 0 {

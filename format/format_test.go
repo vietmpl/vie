@@ -14,11 +14,16 @@ func TestSource(t *testing.T) {
 	t.Parallel()
 	golden.Run(t, func(t *testing.T, input []byte) []byte {
 		t.Parallel()
-		f := parser.Source(input)
-		var b bytes.Buffer
-		if err := format.FormatFile(&b, f); err != nil {
+
+		f, err := parser.ParseBytes(input)
+		if err != nil {
 			t.Fatal(err)
 		}
-		return b.Bytes()
+
+		var buf bytes.Buffer
+		if err := format.FormatFile(&buf, f); err != nil {
+			t.Fatal(err)
+		}
+		return buf.Bytes()
 	})
 }
