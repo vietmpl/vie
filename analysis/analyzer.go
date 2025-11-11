@@ -282,7 +282,7 @@ func (a *analyzer) expr(expr ast.Expr) any {
 				Want:     len(fn.ArgTypes),
 				Pos_:     e.Pos(),
 			})
-			return value.TypeString
+			return fn.ReturnType
 		}
 		for i, arg := range e.Args {
 			x := a.expr(arg)
@@ -292,8 +292,7 @@ func (a *analyzer) expr(expr ast.Expr) any {
 				Pos:  arg.Pos(),
 			})
 		}
-		// TODO(skewb1k): use fn return type.
-		return value.TypeString
+		return fn.ReturnType
 	// case *ast.PipeExpr:
 
 	default:

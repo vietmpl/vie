@@ -76,9 +76,10 @@ func Neq[T comparable](x, y T) Bool {
 }
 
 type Function struct {
-	Name     string
-	ArgTypes []Type
-	Impl     func(args []Value) Value
+	Name       string
+	ArgTypes   []Type
+	ReturnType Type
+	Impl       func(args []Value) Value
 }
 
 func (Function) Type() Type { return TypeFunction }
