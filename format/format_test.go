@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"testing"
 
+	"github.com/skewb1k/golden"
+
 	"github.com/vietmpl/vie/format"
 	"github.com/vietmpl/vie/parser"
-	"github.com/vietmpl/vie/pkg/golden"
 )
 
 func TestSource(t *testing.T) {
