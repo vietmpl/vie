@@ -4,20 +4,19 @@ go 1.24.2
 
 require (
 	github.com/charmbracelet/fang v0.4.4
+	github.com/skewb1k/golden v0.0.0-20251111012233-b1b76d4ddcbb
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1
 	github.com/tree-sitter/go-tree-sitter v0.25.0
 	github.com/vietmpl/tree-sitter-vie v0.2.1
 )
 
-require github.com/skewb1k/golden v0.0.0-20251111012233-b1b76d4ddcbb
-
 require (
 	charm.land/lipgloss/v2 v2.0.0-beta.3.0.20251106193318-19329a3e8410 // indirect
 	github.com/charmbracelet/colorprofile v0.3.3 // indirect
-	github.com/charmbracelet/ultraviolet v0.0.0-20251106193841-7889546fc720 // indirect
-	github.com/charmbracelet/x/ansi v0.11.0 // indirect
-	github.com/charmbracelet/x/exp/charmtone v0.0.0-20251109135125-8916d276318f // indirect
+	github.com/charmbracelet/ultraviolet v0.0.0-20251110211939-d0eeadbd8712 // indirect
+	github.com/charmbracelet/x/ansi v0.11.1-0.20251110210702-903592506081 // indirect
+	github.com/charmbracelet/x/exp/charmtone v0.0.0-20251110210702-903592506081 // indirect
 	github.com/charmbracelet/x/exp/color v0.0.0-20251006100439-2151805163c8 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
