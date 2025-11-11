@@ -2,7 +2,6 @@ package render_test
 
 import (
 	"bytes"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -46,8 +45,7 @@ func TestSource(t *testing.T) {
 
 		f := parser.Source(input)
 
-		name := filepath.ToSlash(t.Name())
-		name = strings.TrimPrefix(name, "TestSource/")
+		name := strings.TrimPrefix(t.Name(), "TestSource/")
 		context := cases[name].context
 
 		var b bytes.Buffer

@@ -83,7 +83,7 @@ func Run(t *testing.T, f func(t *testing.T, input []byte) []byte) {
 			return err
 		}
 
-		t.Run(name, func(t *testing.T) {
+		t.Run(filepath.ToSlash(name), func(t *testing.T) {
 			t.Helper()
 
 			input, err := os.ReadFile(path)
