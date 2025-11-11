@@ -283,57 +283,65 @@ func (a *analyzer) expr(expr ast.Expr) any {
 		return a.expr(e.X)
 
 	case *ast.CallExpr:
-		fn, err := builtin.LookupFunction(e.Func)
-		if err != nil {
-			a.diagnostics = append(a.diagnostics, &BuiltinNotFound{
-				Name: e.Func.Name,
-				Msg:  err.Error(),
-				Pos_: e.Pos(),
-			})
-			return nil
-		}
-		if len(e.Args) != len(fn.ArgTypes) {
-			a.diagnostics = append(a.diagnostics, &IncorrectArgCount{
-				FuncName: e.Func.Name,
-				Got:      len(e.Args),
-				Want:     len(fn.ArgTypes),
-				Pos_:     e.Pos(),
-			})
-			return fn.ReturnType
-		}
+		return a.fn(e.Func, e.Args)
 
-		// Evaluate and collect argument types for the function call. If any
-		// argument expression cannot be typed (returns nil), stop processing
-		// and propagate nil.
-		type typedArg struct {
-			typ  any
-			expr ast.Expr
-		}
-		args := make([]typedArg, 0, len(e.Args))
-		for _, arg := range e.Args {
-			x := a.expr(arg)
-			if x == nil {
-				return nil
-			}
-			args = append(args, typedArg{
-				typ:  x,
-				expr: arg,
-			})
-		}
-
-		for i, arg := range args {
-			a.expectType(arg.typ, Usage{
-				Type: fn.ArgTypes[i],
-				Kind: UsageKindCall,
-				Pos:  arg.expr.Pos(),
-			})
-		}
-		return fn.ReturnType
-	// case *ast.PipeExpr:
+	case *ast.PipeExpr:
+		return a.fn(e.Func, []ast.Expr{e.Arg})
 
 	default:
 		panic(fmt.Sprintf("analyzer: unexpected expr type %T", expr))
 	}
+}
+
+func (a *analyzer) fn(ident ast.Ident, exprs []ast.Expr) any {
+	fn, err := builtin.LookupFunction(ident)
+	if err != nil {
+		a.diagnostics = append(a.diagnostics, &BuiltinNotFound{
+			Name: ident.Name,
+			Msg:  err.Error(),
+			Pos_: ident.Pos(),
+		})
+		return nil
+	}
+	// TODO(skewb1k): improve error messages for PipeExpr.
+	if len(exprs) != len(fn.ArgTypes) {
+		a.diagnostics = append(a.diagnostics, &IncorrectArgCount{
+			FuncName: ident.Name,
+			Got:      len(exprs),
+			Want:     len(fn.ArgTypes),
+			// TODO(skewb1k): use proper arg pos.
+			Pos_: ident.Pos(),
+		})
+		return fn.ReturnType
+	}
+
+	// Evaluate and collect argument types for the function call. If any
+	// argument expression cannot be typed (returns nil), stop processing
+	// and propagate nil.
+	type typedArg struct {
+		typ  any
+		expr ast.Expr
+	}
+	args := make([]typedArg, 0, len(exprs))
+	for _, arg := range exprs {
+		x := a.expr(arg)
+		if x == nil {
+			return nil
+		}
+		args = append(args, typedArg{
+			typ:  x,
+			expr: arg,
+		})
+	}
+
+	for i, arg := range args {
+		a.expectType(arg.typ, Usage{
+			Type: fn.ArgTypes[i],
+			Kind: UsageKindCall,
+			Pos:  arg.expr.Pos(),
+		})
+	}
+	return fn.ReturnType
 }
 
 func (a *analyzer) expectType(x any, u Usage) {

@@ -164,6 +164,11 @@ func TestTypes(t *testing.T) {
 				"a": TypeString,
 			},
 		},
+		"pipe": {
+			types: map[string]Type{
+				"a": TypeString,
+			},
+		},
 		"incorrect-arg-count": {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
