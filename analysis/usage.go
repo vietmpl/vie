@@ -11,7 +11,8 @@ const (
 	UsageKindRender usageKind = iota
 	UsageKindSwitch
 	UsageKindIf
-	UsageKindBinop
+	UsageKindBinOp
+	UsageKindUnOp
 )
 
 type Usage struct {

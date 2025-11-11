@@ -134,6 +134,7 @@ func (a *analyzer) stmts(stmts []ast.Stmt) {
 	}
 }
 
+// TODO(skewb1k): avoid using any to represent `[value.Type] | [VarType]`.
 func (a *analyzer) expr(e ast.Expr) any {
 	switch n := e.(type) {
 	case *ast.BasicLit:
@@ -152,16 +153,29 @@ func (a *analyzer) expr(e ast.Expr) any {
 	case *ast.UnaryExpr:
 		x := a.expr(n.X)
 		// The '!' and 'not' operators can only be applied to boolean values
-		return x
+		a.expectOperandType(x, Usage{
+			Type: value.TypeBool,
+			Kind: UsageKindUnOp,
+			Pos:  n.X.Pos(),
+		})
+		return value.TypeBool
 
 	case *ast.BinaryExpr:
 		switch n.Op {
 		case ast.BinOpKindConcat:
 			x := a.expr(n.X)
-			a.expectOperandType(x, n.X.Pos(), value.TypeString)
+			a.expectOperandType(x, Usage{
+				Type: value.TypeString,
+				Kind: UsageKindBinOp,
+				Pos:  n.X.Pos(),
+			})
 
 			y := a.expr(n.Y)
-			a.expectOperandType(y, n.Y.Pos(), value.TypeString)
+			a.expectOperandType(y, Usage{
+				Type: value.TypeString,
+				Kind: UsageKindBinOp,
+				Pos:  n.Y.Pos(),
+			})
 			return value.TypeString
 
 		case
@@ -190,7 +204,7 @@ func (a *analyzer) expr(e ast.Expr) any {
 				case VarType:
 					a.addUsage(yy.String(), Usage{
 						Type: xx,
-						Kind: UsageKindBinop,
+						Kind: UsageKindBinOp,
 						Pos:  n.Pos(),
 					})
 				}
@@ -200,7 +214,7 @@ func (a *analyzer) expr(e ast.Expr) any {
 				case value.Type:
 					a.addUsage(xx.String(), Usage{
 						Type: yy,
-						Kind: UsageKindBinop,
+						Kind: UsageKindBinOp,
 						Pos:  n.Pos(),
 					})
 				// <var> is <var>
@@ -224,10 +238,18 @@ func (a *analyzer) expr(e ast.Expr) any {
 			ast.BinOpKindOr:
 
 			x := a.expr(n.X)
-			a.expectOperandType(x, n.X.Pos(), value.TypeBool)
+			a.expectOperandType(x, Usage{
+				Type: value.TypeBool,
+				Kind: UsageKindBinOp,
+				Pos:  n.X.Pos(),
+			})
 
 			y := a.expr(n.Y)
-			a.expectOperandType(y, n.Y.Pos(), value.TypeBool)
+			a.expectOperandType(y, Usage{
+				Type: value.TypeBool,
+				Kind: UsageKindBinOp,
+				Pos:  n.Y.Pos(),
+			})
 			return value.TypeBool
 
 		default:
@@ -245,21 +267,17 @@ func (a *analyzer) expr(e ast.Expr) any {
 	}
 }
 
-func (a *analyzer) expectOperandType(x any, pos ast.Pos, typ value.Type) {
+func (a *analyzer) expectOperandType(x any, u Usage) {
 	switch xx := x.(type) {
 	case value.Type:
-		if xx != typ {
+		if xx != u.Type {
 			a.diagnostics = append(a.diagnostics, &WrongUsage{
-				WantType: typ,
+				WantType: u.Type,
 				GotType:  xx,
-				Pos_:     pos,
+				Pos_:     u.Pos,
 			})
 		}
 	case VarType:
-		a.addUsage(xx.String(), Usage{
-			Type: typ,
-			Kind: UsageKindBinop,
-			Pos:  pos,
-		})
+		a.addUsage(xx.String(), u)
 	}
 }

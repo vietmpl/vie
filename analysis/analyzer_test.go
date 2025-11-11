@@ -95,6 +95,19 @@ func TestTypes(t *testing.T) {
 				},
 			},
 		},
+		"non-bool-not": {
+			types: map[string]Type{},
+			diagnostics: []Diagnostic{
+				&WrongUsage{
+					WantType: TypeBool,
+					GotType:  TypeString,
+					Pos_: ast.Pos{
+						Line:      0,
+						Character: 7,
+					},
+				},
+			},
+		},
 		"cross-var": {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
