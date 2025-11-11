@@ -73,6 +73,8 @@ func (a *analyzer) stmt(stmt ast.Stmt) {
 	case *ast.RenderStmt:
 		x := a.expr(s.X)
 		switch xx := x.(type) {
+		case nil:
+			return
 		case value.Type:
 			if xx != value.TypeString {
 				a.diagnostics = append(a.diagnostics, &WrongUsage{
@@ -92,6 +94,8 @@ func (a *analyzer) stmt(stmt ast.Stmt) {
 	case *ast.IfStmt:
 		cond := a.expr(s.Cond)
 		switch condx := cond.(type) {
+		case nil:
+			return
 		case value.Type:
 			if condx != value.TypeBool {
 				a.diagnostics = append(a.diagnostics, &WrongUsage{
@@ -111,6 +115,8 @@ func (a *analyzer) stmt(stmt ast.Stmt) {
 		for _, elseIfClause := range s.ElseIfs {
 			elseIfCond := a.expr(elseIfClause.Cond)
 			switch elseIfCondx := elseIfCond.(type) {
+			case nil:
+				return
 			case value.Type:
 				if elseIfCondx != value.TypeBool {
 					a.diagnostics = append(a.diagnostics, &WrongUsage{
@@ -157,6 +163,9 @@ func (a *analyzer) expr(expr ast.Expr) any {
 
 	case *ast.UnaryExpr:
 		x := a.expr(e.X)
+		if x == nil {
+			return nil
+		}
 		// The '!' and 'not' operators can only be applied to boolean values
 		a.expectType(x, Usage{
 			Type: value.TypeBool,
@@ -169,13 +178,16 @@ func (a *analyzer) expr(expr ast.Expr) any {
 		switch e.Op {
 		case ast.BinOpKindConcat:
 			x := a.expr(e.X)
+			y := a.expr(e.Y)
+			if x == nil || y == nil {
+				return nil
+			}
+
 			a.expectType(x, Usage{
 				Type: value.TypeString,
 				Kind: UsageKindBinOp,
 				Pos:  e.X.Pos(),
 			})
-
-			y := a.expr(e.Y)
 			a.expectType(y, Usage{
 				Type: value.TypeString,
 				Kind: UsageKindBinOp,
@@ -191,6 +203,9 @@ func (a *analyzer) expr(expr ast.Expr) any {
 
 			x := a.expr(e.X)
 			y := a.expr(e.Y)
+			if x == nil || y == nil {
+				return nil
+			}
 			// TODO(skewb1k): refactor.
 			switch xx := x.(type) {
 			case value.Type:
@@ -243,13 +258,16 @@ func (a *analyzer) expr(expr ast.Expr) any {
 			ast.BinOpKindOr:
 
 			x := a.expr(e.X)
+			y := a.expr(e.Y)
+			if x == nil || y == nil {
+				return nil
+			}
+
 			a.expectType(x, Usage{
 				Type: value.TypeBool,
 				Kind: UsageKindBinOp,
 				Pos:  e.X.Pos(),
 			})
-
-			y := a.expr(e.Y)
 			a.expectType(y, Usage{
 				Type: value.TypeBool,
 				Kind: UsageKindBinOp,
@@ -272,8 +290,7 @@ func (a *analyzer) expr(expr ast.Expr) any {
 				Msg:  err.Error(),
 				Pos_: e.Pos(),
 			})
-			// TODO(skewb1k): return nil.
-			return value.TypeString
+			return nil
 		}
 		if len(e.Args) != len(fn.ArgTypes) {
 			a.diagnostics = append(a.diagnostics, &IncorrectArgCount{
@@ -284,12 +301,31 @@ func (a *analyzer) expr(expr ast.Expr) any {
 			})
 			return fn.ReturnType
 		}
-		for i, arg := range e.Args {
+
+		// Evaluate and collect argument types for the function call. If any
+		// argument expression cannot be typed (returns nil), stop processing
+		// and propagate nil.
+		type typedArg struct {
+			typ  any
+			expr ast.Expr
+		}
+		args := make([]typedArg, 0, len(e.Args))
+		for _, arg := range e.Args {
 			x := a.expr(arg)
-			a.expectType(x, Usage{
+			if x == nil {
+				return nil
+			}
+			args = append(args, typedArg{
+				typ:  x,
+				expr: arg,
+			})
+		}
+
+		for i, arg := range args {
+			a.expectType(arg.typ, Usage{
 				Type: fn.ArgTypes[i],
 				Kind: UsageKindCall,
-				Pos:  arg.Pos(),
+				Pos:  arg.expr.Pos(),
 			})
 		}
 		return fn.ReturnType

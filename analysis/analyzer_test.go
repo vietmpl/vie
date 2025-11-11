@@ -205,6 +205,32 @@ func TestTypes(t *testing.T) {
 				},
 			},
 		},
+		"call-undefined": {
+			types: map[string]Type{},
+			diagnostics: []Diagnostic{
+				&BuiltinNotFound{
+					Name: "@undefined_func",
+					Msg:  "function @undefined_func is undefined",
+					Pos_: ast.Pos{
+						Line:      0,
+						Character: 10,
+					},
+				},
+			},
+		},
+		"wrong-use-call-undefined": {
+			types: map[string]Type{},
+			diagnostics: []Diagnostic{
+				&BuiltinNotFound{
+					Name: "@undefined_func",
+					Msg:  "function @undefined_func is undefined",
+					Pos_: ast.Pos{
+						Line:      0,
+						Character: 18,
+					},
+				},
+			},
+		},
 	}
 
 	for _, e := range entries {

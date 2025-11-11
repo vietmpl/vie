@@ -1,0 +1,1 @@
+{{ @upper(@undefined_func("")) }}
