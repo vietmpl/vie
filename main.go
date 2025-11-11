@@ -27,6 +27,11 @@ func main() {
 		renderCmd(),
 	)
 
+	root.SetVersionTemplate("{{.Version}}\n")
+
+	root.InitDefaultVersionFlag()
+	root.Flag("version").Usage = "Print version and exit"
+
 	if err := fang.Execute(
 		context.Background(),
 		root,
