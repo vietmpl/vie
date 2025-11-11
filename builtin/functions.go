@@ -134,9 +134,9 @@ func capitalize(args []value.Value) value.Value {
 
 func title(args []value.Value) value.Value {
 	s := args[0].(value.String)
-
 	runes := []rune(s)
 	inWord := false
+
 	for i, r := range runes {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {
 			if !inWord {
@@ -146,9 +146,10 @@ func title(args []value.Value) value.Value {
 				runes[i] = unicode.ToLower(r)
 			}
 		} else {
-			inWord = false // Non-letter / digit
+			inWord = false
 		}
 	}
+
 	return value.String(string(runes))
 }
 
@@ -252,10 +253,9 @@ func snake(args []value.Value) value.Value {
 
 func splitWords(s string) []string {
 	var words []string
-	runes := []rune(s)
 	var buf []rune
 
-	for _, r := range runes {
+	for _, r := range s {
 		if unicode.IsLetter(r) || unicode.IsDigit(r) {
 			if len(buf) > 0 && unicode.IsUpper(r) && unicode.IsLower(buf[len(buf)-1]) {
 				words = append(words, string(buf))
