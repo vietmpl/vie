@@ -255,7 +255,7 @@ func TestTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			actualTypes, actualDiagnostics := File(f)
+			actualTypes, actualDiagnostics := CheckFile(f)
 
 			assert.Equal(t, cases[name], testCase{
 				types:       actualTypes,

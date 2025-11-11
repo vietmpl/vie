@@ -33,7 +33,7 @@ func contextCmd() *cobra.Command {
 				return err
 			}
 
-			tm, diagnostics := analysis.File(f)
+			tm, diagnostics := analysis.CheckFile(f)
 			if len(diagnostics) > 0 {
 				printDiagnostics(path, diagnostics)
 				return nil

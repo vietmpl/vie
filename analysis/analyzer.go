@@ -8,12 +8,6 @@ import (
 	"github.com/vietmpl/vie/value"
 )
 
-type VarType string
-
-func (vt VarType) String() string {
-	return string(vt)
-}
-
 type analyzer struct {
 	usages      map[string][]Usage
 	diagnostics []Diagnostic
@@ -23,11 +17,11 @@ func (a *analyzer) addUsage(varName string, u Usage) {
 	a.usages[varName] = append(a.usages[varName], u)
 }
 
-func File(file *ast.File) (map[string]value.Type, []Diagnostic) {
+func CheckFile(file *ast.File) (map[string]value.Type, []Diagnostic) {
 	a := analyzer{
 		usages: make(map[string][]Usage),
 	}
-	a.stmts(file.Stmts)
+	a.checkStmts(file.Stmts)
 
 	types := make(map[string]value.Type, len(a.usages))
 	for name, uses := range a.usages {
@@ -60,18 +54,18 @@ func File(file *ast.File) (map[string]value.Type, []Diagnostic) {
 	return types, a.diagnostics
 }
 
-func (a *analyzer) stmts(stmts []ast.Stmt) {
+func (a *analyzer) checkStmts(stmts []ast.Stmt) {
 	for _, s := range stmts {
-		a.stmt(s)
+		a.checkStmt(s)
 	}
 }
 
-func (a *analyzer) stmt(stmt ast.Stmt) {
+func (a *analyzer) checkStmt(stmt ast.Stmt) {
 	switch s := stmt.(type) {
 	case *ast.Text:
 		// Skip
 	case *ast.RenderStmt:
-		x := a.expr(s.X)
+		x := a.checkExpr(s.X)
 		switch xx := x.(type) {
 		case nil:
 			return
@@ -92,7 +86,7 @@ func (a *analyzer) stmt(stmt ast.Stmt) {
 		}
 
 	case *ast.IfStmt:
-		cond := a.expr(s.Cond)
+		cond := a.checkExpr(s.Cond)
 		switch condx := cond.(type) {
 		case nil:
 			return
@@ -111,9 +105,9 @@ func (a *analyzer) stmt(stmt ast.Stmt) {
 				Pos:  s.Cond.Pos(),
 			})
 		}
-		a.stmts(s.Cons)
+		a.checkStmts(s.Cons)
 		for _, elseIfClause := range s.ElseIfs {
-			elseIfCond := a.expr(elseIfClause.Cond)
+			elseIfCond := a.checkExpr(elseIfClause.Cond)
 			switch elseIfCondx := elseIfCond.(type) {
 			case nil:
 				return
@@ -132,10 +126,10 @@ func (a *analyzer) stmt(stmt ast.Stmt) {
 					Pos:  elseIfClause.Cond.Pos(),
 				})
 			}
-			a.stmts(elseIfClause.Cons)
+			a.checkStmts(elseIfClause.Cons)
 		}
 		if s.Else != nil {
-			a.stmts(s.Else.Cons)
+			a.checkStmts(s.Else.Cons)
 		}
 
 	// case *ast.SwitchStmt:
@@ -146,7 +140,7 @@ func (a *analyzer) stmt(stmt ast.Stmt) {
 }
 
 // TODO(skewb1k): avoid using any to represent `[value.Type] | [VarType]`.
-func (a *analyzer) expr(expr ast.Expr) any {
+func (a *analyzer) checkExpr(expr ast.Expr) any {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
 		switch e.Kind {
@@ -162,7 +156,7 @@ func (a *analyzer) expr(expr ast.Expr) any {
 		return VarType(e.Name)
 
 	case *ast.UnaryExpr:
-		x := a.expr(e.X)
+		x := a.checkExpr(e.X)
 		if x == nil {
 			return nil
 		}
@@ -177,8 +171,8 @@ func (a *analyzer) expr(expr ast.Expr) any {
 	case *ast.BinaryExpr:
 		switch e.Op {
 		case ast.BinOpKindConcat:
-			x := a.expr(e.X)
-			y := a.expr(e.Y)
+			x := a.checkExpr(e.X)
+			y := a.checkExpr(e.Y)
 			if x == nil || y == nil {
 				return nil
 			}
@@ -201,8 +195,8 @@ func (a *analyzer) expr(expr ast.Expr) any {
 			ast.BinOpKindIs,
 			ast.BinOpKindIsNot:
 
-			x := a.expr(e.X)
-			y := a.expr(e.Y)
+			x := a.checkExpr(e.X)
+			y := a.checkExpr(e.Y)
 			if x == nil || y == nil {
 				return nil
 			}
@@ -257,8 +251,8 @@ func (a *analyzer) expr(expr ast.Expr) any {
 			ast.BinOpKindAnd,
 			ast.BinOpKindOr:
 
-			x := a.expr(e.X)
-			y := a.expr(e.Y)
+			x := a.checkExpr(e.X)
+			y := a.checkExpr(e.Y)
 			if x == nil || y == nil {
 				return nil
 			}
@@ -280,20 +274,20 @@ func (a *analyzer) expr(expr ast.Expr) any {
 		}
 
 	case *ast.ParenExpr:
-		return a.expr(e.X)
+		return a.checkExpr(e.X)
 
 	case *ast.CallExpr:
-		return a.fn(e.Func, e.Args)
+		return a.checkFunc(e.Func, e.Args)
 
 	case *ast.PipeExpr:
-		return a.fn(e.Func, []ast.Expr{e.Arg})
+		return a.checkFunc(e.Func, []ast.Expr{e.Arg})
 
 	default:
 		panic(fmt.Sprintf("analyzer: unexpected expr type %T", expr))
 	}
 }
 
-func (a *analyzer) fn(ident ast.Ident, exprs []ast.Expr) any {
+func (a *analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
 	fn, err := builtin.LookupFunction(ident)
 	if err != nil {
 		a.diagnostics = append(a.diagnostics, &BuiltinNotFound{
@@ -324,7 +318,7 @@ func (a *analyzer) fn(ident ast.Ident, exprs []ast.Expr) any {
 	}
 	args := make([]typedArg, 0, len(exprs))
 	for _, arg := range exprs {
-		x := a.expr(arg)
+		x := a.checkExpr(arg)
 		if x == nil {
 			return nil
 		}
@@ -357,4 +351,10 @@ func (a *analyzer) expectType(x any, u Usage) {
 	case VarType:
 		a.addUsage(xx.String(), u)
 	}
+}
+
+type VarType string
+
+func (vt VarType) String() string {
+	return string(vt)
 }
