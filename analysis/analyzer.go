@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/vietmpl/vie/ast"
+	"github.com/vietmpl/vie/builtin"
 	"github.com/vietmpl/vie/value"
 )
 
@@ -61,120 +62,124 @@ func File(file *ast.File) (map[string]value.Type, []Diagnostic) {
 
 func (a *analyzer) stmts(stmts []ast.Stmt) {
 	for _, s := range stmts {
-		switch n := s.(type) {
-		case *ast.Text:
-			// Skip
-		case *ast.RenderStmt:
-			x := a.expr(n.X)
-			switch xx := x.(type) {
-			case value.Type:
-				if xx != value.TypeString {
-					a.diagnostics = append(a.diagnostics, &WrongUsage{
-						WantType: value.TypeString,
-						GotType:  xx,
-						Pos_:     n.X.Pos(),
-					})
-				}
-			case VarType:
-				a.addUsage(xx.String(), Usage{
-					Type: value.TypeString,
-					Kind: UsageKindRender,
-					Pos:  n.X.Pos(),
+		a.stmt(s)
+	}
+}
+
+func (a *analyzer) stmt(stmt ast.Stmt) {
+	switch s := stmt.(type) {
+	case *ast.Text:
+		// Skip
+	case *ast.RenderStmt:
+		x := a.expr(s.X)
+		switch xx := x.(type) {
+		case value.Type:
+			if xx != value.TypeString {
+				a.diagnostics = append(a.diagnostics, &WrongUsage{
+					WantType: value.TypeString,
+					GotType:  xx,
+					Pos_:     s.X.Pos(),
 				})
 			}
+		case VarType:
+			a.addUsage(xx.String(), Usage{
+				Type: value.TypeString,
+				Kind: UsageKindRender,
+				Pos:  s.X.Pos(),
+			})
+		}
 
-		case *ast.IfStmt:
-			cond := a.expr(n.Cond)
-			switch condx := cond.(type) {
+	case *ast.IfStmt:
+		cond := a.expr(s.Cond)
+		switch condx := cond.(type) {
+		case value.Type:
+			if condx != value.TypeBool {
+				a.diagnostics = append(a.diagnostics, &WrongUsage{
+					WantType: value.TypeBool,
+					GotType:  condx,
+					Pos_:     s.Cond.Pos(),
+				})
+			}
+		case VarType:
+			a.addUsage(condx.String(), Usage{
+				Type: value.TypeBool,
+				Kind: UsageKindIf,
+				Pos:  s.Cond.Pos(),
+			})
+		}
+		a.stmts(s.Cons)
+		for _, elseIfClause := range s.ElseIfs {
+			elseIfCond := a.expr(elseIfClause.Cond)
+			switch elseIfCondx := elseIfCond.(type) {
 			case value.Type:
-				if condx != value.TypeBool {
+				if elseIfCondx != value.TypeBool {
 					a.diagnostics = append(a.diagnostics, &WrongUsage{
 						WantType: value.TypeBool,
-						GotType:  condx,
-						Pos_:     n.Cond.Pos(),
+						GotType:  elseIfCondx,
+						Pos_:     elseIfClause.Cond.Pos(),
 					})
 				}
 			case VarType:
-				a.addUsage(condx.String(), Usage{
+				a.addUsage(elseIfCondx.String(), Usage{
 					Type: value.TypeBool,
 					Kind: UsageKindIf,
-					Pos:  n.Cond.Pos(),
+					Pos:  elseIfClause.Cond.Pos(),
 				})
 			}
-			a.stmts(n.Cons)
-			for _, elseIfClause := range n.ElseIfs {
-				elseIfCond := a.expr(elseIfClause.Cond)
-				switch elseIfCondx := elseIfCond.(type) {
-				case value.Type:
-					if elseIfCondx != value.TypeBool {
-						a.diagnostics = append(a.diagnostics, &WrongUsage{
-							WantType: value.TypeBool,
-							GotType:  elseIfCondx,
-							Pos_:     elseIfClause.Cond.Pos(),
-						})
-					}
-				case VarType:
-					a.addUsage(elseIfCondx.String(), Usage{
-						Type: value.TypeBool,
-						Kind: UsageKindIf,
-						Pos:  elseIfClause.Cond.Pos(),
-					})
-				}
-				a.stmts(elseIfClause.Cons)
-			}
-			if n.Else != nil {
-				a.stmts(n.Else.Cons)
-			}
-
-		// case *ast.SwitchStmt:
-
-		default:
-			panic(fmt.Sprintf("analyzer: unexpected stmt type %T", s))
+			a.stmts(elseIfClause.Cons)
 		}
+		if s.Else != nil {
+			a.stmts(s.Else.Cons)
+		}
+
+	// case *ast.SwitchStmt:
+
+	default:
+		panic(fmt.Sprintf("analyzer: unexpected stmt type %T", stmt))
 	}
 }
 
 // TODO(skewb1k): avoid using any to represent `[value.Type] | [VarType]`.
-func (a *analyzer) expr(e ast.Expr) any {
-	switch n := e.(type) {
+func (a *analyzer) expr(expr ast.Expr) any {
+	switch e := expr.(type) {
 	case *ast.BasicLit:
-		switch n.Kind {
+		switch e.Kind {
 		case ast.KindBool:
 			return value.TypeBool
 		case ast.KindString:
 			return value.TypeString
 		default:
-			panic(fmt.Sprintf("analyzer: unexpected BasicLit kind %d", n.Kind))
+			panic(fmt.Sprintf("analyzer: unexpected BasicLit kind %d", e.Kind))
 		}
 
 	case *ast.Ident:
-		return VarType(n.Name)
+		return VarType(e.Name)
 
 	case *ast.UnaryExpr:
-		x := a.expr(n.X)
+		x := a.expr(e.X)
 		// The '!' and 'not' operators can only be applied to boolean values
-		a.expectOperandType(x, Usage{
+		a.expectType(x, Usage{
 			Type: value.TypeBool,
 			Kind: UsageKindUnOp,
-			Pos:  n.X.Pos(),
+			Pos:  e.X.Pos(),
 		})
 		return value.TypeBool
 
 	case *ast.BinaryExpr:
-		switch n.Op {
+		switch e.Op {
 		case ast.BinOpKindConcat:
-			x := a.expr(n.X)
-			a.expectOperandType(x, Usage{
+			x := a.expr(e.X)
+			a.expectType(x, Usage{
 				Type: value.TypeString,
 				Kind: UsageKindBinOp,
-				Pos:  n.X.Pos(),
+				Pos:  e.X.Pos(),
 			})
 
-			y := a.expr(n.Y)
-			a.expectOperandType(y, Usage{
+			y := a.expr(e.Y)
+			a.expectType(y, Usage{
 				Type: value.TypeString,
 				Kind: UsageKindBinOp,
-				Pos:  n.Y.Pos(),
+				Pos:  e.Y.Pos(),
 			})
 			return value.TypeString
 
@@ -184,8 +189,8 @@ func (a *analyzer) expr(e ast.Expr) any {
 			ast.BinOpKindIs,
 			ast.BinOpKindIsNot:
 
-			x := a.expr(n.X)
-			y := a.expr(n.Y)
+			x := a.expr(e.X)
+			y := a.expr(e.Y)
 			// TODO(skewb1k): refactor.
 			switch xx := x.(type) {
 			case value.Type:
@@ -197,7 +202,7 @@ func (a *analyzer) expr(e ast.Expr) any {
 						a.diagnostics = append(a.diagnostics, &InvalidOperation{
 							X:    xx,
 							Y:    yy,
-							Pos_: n.Pos(),
+							Pos_: e.Pos(),
 						})
 					}
 				// <lit> is <var>
@@ -205,7 +210,7 @@ func (a *analyzer) expr(e ast.Expr) any {
 					a.addUsage(yy.String(), Usage{
 						Type: xx,
 						Kind: UsageKindBinOp,
-						Pos:  n.Pos(),
+						Pos:  e.Pos(),
 					})
 				}
 			case VarType:
@@ -215,14 +220,14 @@ func (a *analyzer) expr(e ast.Expr) any {
 					a.addUsage(xx.String(), Usage{
 						Type: yy,
 						Kind: UsageKindBinOp,
-						Pos:  n.Pos(),
+						Pos:  e.Pos(),
 					})
 				// <var> is <var>
 				case VarType:
 					a.diagnostics = append(a.diagnostics, &CrossVarTyping{
 						X:    xx,
 						Y:    yy,
-						Pos_: n.Pos(),
+						Pos_: e.Pos(),
 					})
 				}
 			}
@@ -237,37 +242,66 @@ func (a *analyzer) expr(e ast.Expr) any {
 			ast.BinOpKindAnd,
 			ast.BinOpKindOr:
 
-			x := a.expr(n.X)
-			a.expectOperandType(x, Usage{
+			x := a.expr(e.X)
+			a.expectType(x, Usage{
 				Type: value.TypeBool,
 				Kind: UsageKindBinOp,
-				Pos:  n.X.Pos(),
+				Pos:  e.X.Pos(),
 			})
 
-			y := a.expr(n.Y)
-			a.expectOperandType(y, Usage{
+			y := a.expr(e.Y)
+			a.expectType(y, Usage{
 				Type: value.TypeBool,
 				Kind: UsageKindBinOp,
-				Pos:  n.Y.Pos(),
+				Pos:  e.Y.Pos(),
 			})
 			return value.TypeBool
 
 		default:
-			panic(fmt.Sprintf("analyzer: unexpected BinOpKind: %T", e))
+			panic(fmt.Sprintf("analyzer: unexpected BinOpKind: %T", expr))
 		}
 
 	case *ast.ParenExpr:
-		return a.expr(n.X)
+		return a.expr(e.X)
 
-	// case *ast.CallExpr:
+	case *ast.CallExpr:
+		fn, err := builtin.LookupFunction(e.Func)
+		if err != nil {
+			a.diagnostics = append(a.diagnostics, &BuiltinNotFound{
+				Name: e.Func.Name,
+				Msg:  err.Error(),
+				Pos_: e.Pos(),
+			})
+			// TODO(skewb1k): return nil.
+			return value.TypeString
+		}
+		if len(e.Args) != len(fn.ArgTypes) {
+			a.diagnostics = append(a.diagnostics, &IncorrectArgCount{
+				FuncName: e.Func.Name,
+				Got:      len(e.Args),
+				Want:     len(fn.ArgTypes),
+				Pos_:     e.Pos(),
+			})
+			return value.TypeString
+		}
+		for i, arg := range e.Args {
+			x := a.expr(arg)
+			a.expectType(x, Usage{
+				Type: fn.ArgTypes[i],
+				Kind: UsageKindCall,
+				Pos:  arg.Pos(),
+			})
+		}
+		// TODO(skewb1k): use fn return type.
+		return value.TypeString
 	// case *ast.PipeExpr:
 
 	default:
-		panic(fmt.Sprintf("analyzer: unexpected expr type %T", e))
+		panic(fmt.Sprintf("analyzer: unexpected expr type %T", expr))
 	}
 }
 
-func (a *analyzer) expectOperandType(x any, u Usage) {
+func (a *analyzer) expectType(x any, u Usage) {
 	switch xx := x.(type) {
 	case value.Type:
 		if xx != u.Type {

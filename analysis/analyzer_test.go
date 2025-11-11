@@ -159,6 +159,52 @@ func TestTypes(t *testing.T) {
 				},
 			},
 		},
+		"call": {
+			types: map[string]Type{
+				"a": TypeString,
+			},
+		},
+		"incorrect-arg-count": {
+			types: map[string]Type{},
+			diagnostics: []Diagnostic{
+				&IncorrectArgCount{
+					FuncName: "@upper",
+					Want:     1,
+					Got:      2,
+					Pos_: ast.Pos{
+						Line:      0,
+						Character: 3,
+					},
+				},
+			},
+		},
+		"incorrect-arg-count-with-var": {
+			types: map[string]Type{},
+			diagnostics: []Diagnostic{
+				&IncorrectArgCount{
+					FuncName: "@upper",
+					Want:     1,
+					Got:      2,
+					Pos_: ast.Pos{
+						Line:      0,
+						Character: 3,
+					},
+				},
+			},
+		},
+		"func-not-found": {
+			types: map[string]Type{},
+			diagnostics: []Diagnostic{
+				&BuiltinNotFound{
+					Name: "@undefined_func",
+					Msg:  "function @undefined_func is undefined",
+					Pos_: ast.Pos{
+						Line:      0,
+						Character: 3,
+					},
+				},
+			},
+		},
 	}
 
 	for _, e := range entries {

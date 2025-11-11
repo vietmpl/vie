@@ -13,6 +13,7 @@ const (
 	UsageKindIf
 	UsageKindBinOp
 	UsageKindUnOp
+	UsageKindCall
 )
 
 type Usage struct {

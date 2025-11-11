@@ -54,3 +54,32 @@ func (d *CrossVarTyping) String() string {
 func (d *CrossVarTyping) Pos() ast.Pos {
 	return d.Pos_
 }
+
+type BuiltinNotFound struct {
+	Name string
+	Msg  string
+	Pos_ ast.Pos
+}
+
+func (d *BuiltinNotFound) String() string {
+	return d.Msg
+}
+
+func (d *BuiltinNotFound) Pos() ast.Pos {
+	return d.Pos_
+}
+
+type IncorrectArgCount struct {
+	FuncName string
+	Want     int
+	Got      int
+	Pos_     ast.Pos
+}
+
+func (d *IncorrectArgCount) String() string {
+	return fmt.Sprintf("function %q expects %d argument(s), but %d were provided", d.FuncName, d.Want, d.Got)
+}
+
+func (d *IncorrectArgCount) Pos() ast.Pos {
+	return d.Pos_
+}
