@@ -2,19 +2,21 @@ package format
 
 import (
 	"fmt"
-	"strings"
+	"io"
 
 	"github.com/vietmpl/vie/ast"
 )
 
 type formatter struct {
-	out strings.Builder
+	w io.Writer
 }
 
-func File(file *ast.File) []byte {
-	var f formatter
+func FormatFile(w io.Writer, file *ast.File) error {
+	f := formatter{
+		w: w,
+	}
 	f.stmts(file.Stmts)
-	return []byte(f.out.String())
+	return nil
 }
 
 func (f *formatter) stmts(stmts []ast.Stmt) {
@@ -26,41 +28,41 @@ func (f *formatter) stmts(stmts []ast.Stmt) {
 func (f *formatter) stmt(s ast.Stmt) {
 	switch n := s.(type) {
 	case *ast.Text:
-		f.out.WriteString(n.Value)
+		io.WriteString(f.w, n.Value)
 
 	case *ast.RenderStmt:
-		f.out.WriteString("{{ ")
+		io.WriteString(f.w, "{{ ")
 		f.expr(n.X)
-		f.out.WriteString(" }}")
+		io.WriteString(f.w, " }}")
 
 	case *ast.IfStmt:
-		f.out.WriteString("{% if ")
+		io.WriteString(f.w, "{% if ")
 		f.expr(n.Cond)
-		f.out.WriteString(" %}\n")
+		io.WriteString(f.w, " %}\n")
 		f.stmts(n.Cons)
 		for _, elseIfClause := range n.ElseIfs {
-			f.out.WriteString("{% else if ")
+			io.WriteString(f.w, "{% else if ")
 			f.expr(elseIfClause.Cond)
-			f.out.WriteString(" %}\n")
+			io.WriteString(f.w, " %}\n")
 			f.stmts(elseIfClause.Cons)
 		}
 		if n.Else != nil {
-			f.out.WriteString("{% else %}\n")
+			io.WriteString(f.w, "{% else %}\n")
 			f.stmts(n.Else.Cons)
 		}
-		f.out.WriteString("{% end %}\n")
+		io.WriteString(f.w, "{% end %}\n")
 
 	case *ast.SwitchStmt:
-		f.out.WriteString("{% switch ")
+		io.WriteString(f.w, "{% switch ")
 		f.expr(n.Value)
-		f.out.WriteString(" %}\n")
+		io.WriteString(f.w, " %}\n")
 		for _, c := range n.Cases {
-			f.out.WriteString("{% case ")
+			io.WriteString(f.w, "{% case ")
 			f.exprList(c.List)
-			f.out.WriteString(" %}\n")
+			io.WriteString(f.w, " %}\n")
 			f.stmts(c.Body)
 		}
-		f.out.WriteString("{% end %}\n")
+		io.WriteString(f.w, "{% end %}\n")
 
 	default:
 		panic(fmt.Sprintf("format: unexpected stmt type %T", s))
@@ -70,41 +72,41 @@ func (f *formatter) stmt(s ast.Stmt) {
 func (f *formatter) expr(e ast.Expr) {
 	switch n := e.(type) {
 	case *ast.BasicLit:
-		f.out.WriteString(n.Value)
+		io.WriteString(f.w, n.Value)
 
 	case *ast.Ident:
-		f.out.WriteString(n.Name)
+		io.WriteString(f.w, n.Name)
 
 	case *ast.UnaryExpr:
-		f.out.WriteString(n.Op.String())
+		io.WriteString(f.w, n.Op.String())
 		// do not insert whitespace after '!'
 		if n.Op != ast.UnOpKindExcl {
-			f.out.WriteByte(' ')
+			io.WriteString(f.w, " ")
 		}
 		f.expr(n.X)
 
 	case *ast.BinaryExpr:
 		f.expr(n.X)
-		f.out.WriteByte(' ')
-		f.out.WriteString(n.Op.String())
-		f.out.WriteByte(' ')
+		io.WriteString(f.w, " ")
+		io.WriteString(f.w, n.Op.String())
+		io.WriteString(f.w, " ")
 		f.expr(n.Y)
 
 	case *ast.ParenExpr:
-		f.out.WriteByte('(')
+		io.WriteString(f.w, "(")
 		f.expr(n.X)
-		f.out.WriteByte(')')
+		io.WriteString(f.w, ")")
 
 	case *ast.CallExpr:
 		f.expr(&n.Func)
-		f.out.WriteByte('(')
+		io.WriteString(f.w, "(")
 		f.exprList(n.Args)
-		f.out.WriteByte(')')
+		io.WriteString(f.w, ")")
 
 	case *ast.PipeExpr:
 		f.expr(n.Arg)
-		f.out.WriteString(" | ")
-		f.out.WriteString(n.Func.Name)
+		io.WriteString(f.w, " | ")
+		io.WriteString(f.w, n.Func.Name)
 
 	default:
 		panic(fmt.Sprintf("format: unexpected expr type %T", e))
@@ -116,7 +118,7 @@ func (f *formatter) exprList(l []ast.Expr) {
 		f.expr(l[0])
 	}
 	for i := 1; i < len(l); i++ {
-		f.out.WriteString(", ")
+		io.WriteString(f.w, ", ")
 		f.expr(l[i])
 	}
 }

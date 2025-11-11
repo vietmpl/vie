@@ -1,6 +1,7 @@
 package format_test
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/vietmpl/vie/format"
@@ -12,8 +13,11 @@ func TestSource(t *testing.T) {
 	t.Parallel()
 	golden.Run(t, func(t *testing.T, input []byte) []byte {
 		t.Parallel()
-		sf := parser.Source(input)
-		actual := format.File(sf)
-		return actual
+		f := parser.Source(input)
+		var b bytes.Buffer
+		if err := format.FormatFile(&b, f); err != nil {
+			t.Fatal(err)
+		}
+		return b.Bytes()
 	})
 }

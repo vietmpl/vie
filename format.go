@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -22,8 +21,9 @@ func formatCmd() *cobra.Command {
 			}
 
 			f := parser.Source(src)
-			res := format.File(f)
-			fmt.Printf("%s", res)
+			if err := format.FormatFile(os.Stdout, f); err != nil {
+				return err
+			}
 			return nil
 		},
 	}
