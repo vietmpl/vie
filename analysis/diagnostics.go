@@ -42,8 +42,8 @@ func (d InvalidOperation) Pos() ast.Pos {
 }
 
 type CrossVarTyping struct {
-	X    VarType
-	Y    VarType
+	X    TypeVar
+	Y    TypeVar
 	Pos_ ast.Pos
 }
 

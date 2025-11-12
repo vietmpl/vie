@@ -13,20 +13,23 @@ type analyzer struct {
 	diagnostics []Diagnostic
 }
 
-func (a *analyzer) addUsage(varName string, u Usage) {
-	a.usages[varName] = append(a.usages[varName], u)
+// TypeVar represents an identifier whose concrete type cannot be directly
+// inferred in the current context. It serves as a placeholder until all
+// usages are analyzed, at which point its type is inferred from context.
+type TypeVar string
+
+func (tv TypeVar) String() string {
+	return string(tv)
 }
 
-func (a *analyzer) addDiagnostic(d Diagnostic) {
-	a.diagnostics = append(a.diagnostics, d)
-}
-
-func CheckFile(file *ast.File) (map[string]value.Type, []Diagnostic) {
-	a := analyzer{
-		usages: make(map[string][]Usage),
-	}
-	a.checkStmts(file.Stmts)
-
+// processUsages finalizes type inference for all recorded variable usages.
+//
+// During analysis, every occurrence of an identifier is recorded in
+// [analyzer.usages] along with the type expected in that context. After
+// traversal of the AST is complete, this function aggregates all collected
+// usages to infer each variable's most likely type and emit diagnostics for
+// all other wrong usages.
+func (a *analyzer) processUsages() map[string]value.Type {
 	types := make(map[string]value.Type, len(a.usages))
 	for name, uses := range a.usages {
 		var typeCount [value.TypeFunction]uint
@@ -44,7 +47,6 @@ func CheckFile(file *ast.File) (map[string]value.Type, []Diagnostic) {
 
 		types[name] = maxType
 
-		// report mismatched usages
 		for _, u := range uses {
 			if u.Type != maxType {
 				a.addDiagnostic(WrongUsage{
@@ -55,6 +57,25 @@ func CheckFile(file *ast.File) (map[string]value.Type, []Diagnostic) {
 			}
 		}
 	}
+	return types
+}
+
+// CheckFile performs static analysis on the given parsed file and returns a
+// mapping of variable names to their inferred value types and list of
+// diagnostics representing detected type mismatches or invalid usages.
+//
+// A variable's final inferred type is determined by majority voting among all
+// its observed usages. If conflicting usages exist, diagnostics are emitted
+// describing the mismatch. The function also detects misuse of built-ins,
+// invalid operations (e.g. comparing incompatible types), and improper
+// argument types in function calls.
+func CheckFile(file *ast.File) (map[string]value.Type, []Diagnostic) {
+	a := analyzer{
+		usages: make(map[string][]Usage),
+	}
+	a.checkStmts(file.Stmts)
+
+	types := a.processUsages()
 	return types, a.diagnostics
 }
 
@@ -81,7 +102,7 @@ func (a *analyzer) checkStmt(stmt ast.Stmt) {
 					Pos_:     s.X.Pos(),
 				})
 			}
-		case VarType:
+		case TypeVar:
 			a.addUsage(xx.String(), Usage{
 				Type: value.TypeString,
 				Kind: UsageKindRender,
@@ -102,7 +123,7 @@ func (a *analyzer) checkStmt(stmt ast.Stmt) {
 					Pos_:     s.Cond.Pos(),
 				})
 			}
-		case VarType:
+		case TypeVar:
 			a.addUsage(condx.String(), Usage{
 				Type: value.TypeBool,
 				Kind: UsageKindIf,
@@ -123,7 +144,7 @@ func (a *analyzer) checkStmt(stmt ast.Stmt) {
 						Pos_:     elseIfClause.Cond.Pos(),
 					})
 				}
-			case VarType:
+			case TypeVar:
 				a.addUsage(elseIfCondx.String(), Usage{
 					Type: value.TypeBool,
 					Kind: UsageKindIf,
@@ -143,7 +164,12 @@ func (a *analyzer) checkStmt(stmt ast.Stmt) {
 	}
 }
 
-// TODO(skewb1k): avoid using any to represent `[value.Type] | [VarType]`.
+// checkExpr inspects an expression node and determines its resulting type
+// or variable reference. It returns either a `value.Type` (for literals or
+// known expressions) or a `VarType` (for identifiers whose type is inferred
+// later). A nil result indicates the expression could not be typed, in
+// which case callers should skip further analysis.
+// TODO(skewb1k): avoid using any to represent `[value.Type] | [TypeVar]`.
 func (a *analyzer) checkExpr(expr ast.Expr) any {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
@@ -157,7 +183,7 @@ func (a *analyzer) checkExpr(expr ast.Expr) any {
 		}
 
 	case *ast.Ident:
-		return VarType(e.Name)
+		return TypeVar(e.Name)
 
 	case *ast.UnaryExpr:
 		x := a.checkExpr(e.X)
@@ -219,14 +245,14 @@ func (a *analyzer) checkExpr(expr ast.Expr) any {
 						})
 					}
 				// <lit> is <var>
-				case VarType:
+				case TypeVar:
 					a.addUsage(yy.String(), Usage{
 						Type: xx,
 						Kind: UsageKindBinOp,
 						Pos:  e.Pos(),
 					})
 				}
-			case VarType:
+			case TypeVar:
 				switch yy := y.(type) {
 				// <var> is <lit>
 				case value.Type:
@@ -236,7 +262,7 @@ func (a *analyzer) checkExpr(expr ast.Expr) any {
 						Pos:  e.Pos(),
 					})
 				// <var> is <var>
-				case VarType:
+				case TypeVar:
 					a.addDiagnostic(CrossVarTyping{
 						X:    xx,
 						Y:    yy,
@@ -291,6 +317,10 @@ func (a *analyzer) checkExpr(expr ast.Expr) any {
 	}
 }
 
+// checkFunc verifies a function call against the builtin function registry. It
+// ensures argument count and types match the builtin definition, producing
+// diagnostics on mismatch. Returns the function’s declared return type if
+// found, or nil on failure.
 func (a *analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
 	fn, err := builtin.LookupFunction(ident)
 	if err != nil {
@@ -342,8 +372,12 @@ func (a *analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
 	return fn.ReturnType
 }
 
-func (a *analyzer) expectType(x any, u Usage) {
-	switch xx := x.(type) {
+// expectType validates that a given expression type matches the expected usage
+// type. If the expression is a variable reference, the usage is recorded for
+// later inference. If it's a literal or typed expression, a diagnostic is
+// emitted when mismatched.
+func (a *analyzer) expectType(t any, u Usage) {
+	switch xx := t.(type) {
 	case value.Type:
 		if xx != u.Type {
 			a.addDiagnostic(WrongUsage{
@@ -352,13 +386,15 @@ func (a *analyzer) expectType(x any, u Usage) {
 				Pos_:     u.Pos,
 			})
 		}
-	case VarType:
+	case TypeVar:
 		a.addUsage(xx.String(), u)
 	}
 }
 
-type VarType string
+func (a *analyzer) addUsage(varName string, u Usage) {
+	a.usages[varName] = append(a.usages[varName], u)
+}
 
-func (vt VarType) String() string {
-	return string(vt)
+func (a *analyzer) addDiagnostic(d Diagnostic) {
+	a.diagnostics = append(a.diagnostics, d)
 }

@@ -112,8 +112,8 @@ func TestTypes(t *testing.T) {
 			types: map[string]Type{},
 			diagnostics: []Diagnostic{
 				CrossVarTyping{
-					X: VarType("a"),
-					Y: VarType("b"),
+					X: TypeVar("a"),
+					Y: TypeVar("b"),
 					Pos_: ast.Pos{
 						Line:      0,
 						Character: 6,
