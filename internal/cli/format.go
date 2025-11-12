@@ -27,26 +27,29 @@ func formatCmd() *cobra.Command {
 			}
 
 			formatFile := func(path string) error {
-				src, err := os.ReadFile(path)
+				f, err := os.ReadFile(path)
 				if err != nil {
 					return err
 				}
 
-				f, err := parser.ParseBytes(src)
+				parsed, err := parser.ParseBytes(f)
 				if err != nil {
 					return err
 				}
 
 				var buf bytes.Buffer
-				if err := format.FormatFile(&buf, f); err != nil {
+				if err := format.FormatFile(&buf, parsed); err != nil {
 					return err
 				}
+				formatted := buf.Bytes()
 
-				if check {
-					fmt.Printf("%s", buf.Bytes())
-				} else {
-					if err := os.WriteFile(path, buf.Bytes(), info.Mode()); err != nil {
-						return err
+				// Check if content has changed
+				if !bytes.Equal(formatted, f) {
+					fmt.Println(path)
+					if !check {
+						if err := os.WriteFile(path, formatted, info.Mode()); err != nil {
+							return err
+						}
 					}
 				}
 				return nil
