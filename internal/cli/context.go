@@ -1,4 +1,4 @@
-package main
+package cli
 
 import (
 	"fmt"
@@ -38,6 +38,7 @@ func contextCmd() *cobra.Command {
 				printDiagnostics(path, diagnostics)
 				return nil
 			}
+			// TODO(skewb1k): improve output format.
 			for varname, typ := range tm {
 				fmt.Printf("%s: %s\n", varname, typ.String())
 			}
