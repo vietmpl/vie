@@ -25,7 +25,6 @@ func Execute(ctx context.Context, use string, version string) error {
 	)
 
 	root.SetVersionTemplate("{{.Version}}\n")
-
 	root.InitDefaultVersionFlag()
 	root.Flag("version").Usage = "Print version and exit"
 
