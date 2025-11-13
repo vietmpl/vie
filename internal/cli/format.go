@@ -15,13 +15,13 @@ import (
 
 func formatCmd() *cobra.Command {
 	var check bool
-	var stdin bool
+	var stdio bool
 
 	cmd := &cobra.Command{
 		Use:  "format <path>",
-		Args: cobra.MaximumNArgs(1), // 0 if --stdin, 1 otherwise
+		Args: cobra.MaximumNArgs(1), // 0 if --stdio, 1 otherwise
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if stdin {
+			if stdio {
 				src, err := io.ReadAll(os.Stdin)
 				if err != nil {
 					return err
@@ -89,7 +89,7 @@ func formatCmd() *cobra.Command {
 	}
 
 	cmd.Flags().BoolVarP(&check, "check", "c", false, "List non-conforming files and exit with an error if the list is non-empty")
-	cmd.Flags().BoolVar(&stdin, "stdin", false, "Read input from stdin and write formatted output to stdout")
+	cmd.Flags().BoolVar(&stdio, "stdio", false, "Read input from stdin and write formatted output to stdout")
 
 	return cmd
 }
