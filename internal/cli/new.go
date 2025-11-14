@@ -1,0 +1,79 @@
+package cli
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"github.com/spf13/cobra"
+	"github.com/vietmpl/vie/analysis"
+	"github.com/vietmpl/vie/internal/template"
+)
+
+func newCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:  "new <template-name> <dest>",
+		Args: cobra.MinimumNArgs(2),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			tmplName := args[0]
+			dest := args[1]
+
+			tmplPath := filepath.Join(".vie", tmplName)
+			tmpl, err := template.FromDir(tmplPath)
+			if err != nil {
+				return err
+			}
+
+			context, err := parseContext(args[2:])
+			if err != nil {
+				return err
+			}
+
+			typemap, diagnostics := tmpl.Analyze()
+			if len(diagnostics) > 0 {
+				printDiagnostics(diagnostics)
+				return nil
+			}
+
+			errs := analysis.MergeTypes(typemap, context)
+			if len(errs) > 0 {
+				for _, err := range errs {
+					fmt.Println(err)
+				}
+				return nil
+			}
+
+			checkForUnusedVars(typemap, context)
+
+			files, err := tmpl.Render(context)
+			if err != nil {
+				return err
+			}
+
+			exit := false
+			for name := range files {
+				path := filepath.Join(dest, name)
+				if _, err := os.Stat(path); err == nil {
+					exit = true
+					fmt.Printf("failed to create %q: file already exists\n", path)
+				}
+			}
+			if exit {
+				os.Exit(1)
+			}
+
+			for relPath, content := range files {
+				path := filepath.Join(dest, relPath)
+				if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+					return err
+				}
+				if err := os.WriteFile(path, content, 0o644); err != nil {
+					return err
+				}
+				fmt.Println(path)
+			}
+			return nil
+		},
+	}
+	return cmd
+}
