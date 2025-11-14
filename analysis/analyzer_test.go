@@ -22,13 +22,13 @@ func TestTypes(t *testing.T) {
 	}
 
 	type testCase struct {
-		types       map[string]Type
+		typemap     map[string]Type
 		diagnostics []Diagnostic
 	}
 
 	cases := map[string]testCase{
 		"render": {
-			types: map[string]Type{
+			typemap: map[string]Type{
 				"name": TypeString,
 				"a":    TypeString,
 				"b":    TypeString,
@@ -45,7 +45,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"if": {
-			types: map[string]Type{
+			typemap: map[string]Type{
 				"a1": TypeBool,
 				"a2": TypeBool,
 				"b2": TypeBool,
@@ -53,7 +53,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"binary": {
-			types: map[string]Type{
+			typemap: map[string]Type{
 				"a": TypeBool,
 				"b": TypeBool,
 				"c": TypeBool,
@@ -64,13 +64,13 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"parens": {
-			types: map[string]Type{
+			typemap: map[string]Type{
 				"a": TypeString,
 				"b": TypeString,
 			},
 		},
 		"concatenate-bool-str": {
-			types: map[string]Type{},
+			typemap: map[string]Type{},
 			diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeString,
@@ -83,7 +83,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"non-bool-if": {
-			types: map[string]Type{},
+			typemap: map[string]Type{},
 			diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeBool,
@@ -96,7 +96,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"non-bool-not": {
-			types: map[string]Type{},
+			typemap: map[string]Type{},
 			diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeBool,
@@ -109,7 +109,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"cross-var": {
-			types: map[string]Type{},
+			typemap: map[string]Type{},
 			diagnostics: []Diagnostic{
 				CrossVarTyping{
 					X: TypeVar("a"),
@@ -122,7 +122,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"multiple-usages": {
-			types: map[string]Type{
+			typemap: map[string]Type{
 				"a": TypeBool,
 			},
 			diagnostics: []Diagnostic{
@@ -137,7 +137,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"equal-usages": {
-			types: map[string]Type{
+			typemap: map[string]Type{
 				"a": TypeString,
 			},
 			diagnostics: []Diagnostic{
@@ -160,17 +160,17 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"call": {
-			types: map[string]Type{
+			typemap: map[string]Type{
 				"a": TypeString,
 			},
 		},
 		"pipe": {
-			types: map[string]Type{
+			typemap: map[string]Type{
 				"a": TypeString,
 			},
 		},
 		"incorrect-arg-count": {
-			types: map[string]Type{},
+			typemap: map[string]Type{},
 			diagnostics: []Diagnostic{
 				IncorrectArgCount{
 					FuncName: "@upper",
@@ -184,7 +184,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"incorrect-arg-count-with-var": {
-			types: map[string]Type{},
+			typemap: map[string]Type{},
 			diagnostics: []Diagnostic{
 				IncorrectArgCount{
 					FuncName: "@upper",
@@ -198,7 +198,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"func-not-found": {
-			types: map[string]Type{},
+			typemap: map[string]Type{},
 			diagnostics: []Diagnostic{
 				BuiltinNotFound{
 					Name: "@undefined_func",
@@ -211,7 +211,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"call-undefined": {
-			types: map[string]Type{},
+			typemap: map[string]Type{},
 			diagnostics: []Diagnostic{
 				BuiltinNotFound{
 					Name: "@undefined_func",
@@ -224,7 +224,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"wrong-use-call-undefined": {
-			types: map[string]Type{},
+			typemap: map[string]Type{},
 			diagnostics: []Diagnostic{
 				BuiltinNotFound{
 					Name: "@undefined_func",
@@ -255,11 +255,13 @@ func TestTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			actualTypes, actualDiagnostics := CheckFile(f)
+			analyzer := NewAnalyzer()
+			analyzer.File(f)
+			typemap, diagnostics := analyzer.Results()
 
 			assert.Equal(t, cases[name], testCase{
-				types:       actualTypes,
-				diagnostics: actualDiagnostics,
+				typemap:     typemap,
+				diagnostics: diagnostics,
 			})
 		})
 	}

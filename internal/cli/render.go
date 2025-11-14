@@ -47,8 +47,10 @@ func renderCmd() *cobra.Command {
 				return err
 			}
 
-			tm, diagnostics := analysis.CheckFile(f)
-			if len(diagnostics) > 0 {
+			analyzer := analysis.NewAnalyzer()
+			analyzer.File(f)
+			tm, diagnostics := analyzer.Results()
+			if diagnostics != nil {
 				printDiagnostics(path, diagnostics)
 				return nil
 			}

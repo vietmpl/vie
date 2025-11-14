@@ -2,24 +2,38 @@ package analysis
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/builtin"
 	"github.com/vietmpl/vie/value"
 )
 
-type analyzer struct {
+type Analyzer struct {
+	mu          sync.RWMutex
 	usages      map[string][]Usage
 	diagnostics []Diagnostic
 }
 
-// TypeVar represents an identifier whose concrete type cannot be directly
-// inferred in the current context. It serves as a placeholder until all
-// usages are analyzed, at which point its type is inferred from context.
-type TypeVar string
+func NewAnalyzer() *Analyzer {
+	return &Analyzer{
+		mu:          sync.RWMutex{},
+		usages:      make(map[string][]Usage),
+		diagnostics: nil,
+	}
+}
 
-func (tv TypeVar) String() string {
-	return string(tv)
+// Results completes type inference and returns results.
+// Should be called once after all files are analyzed.
+func (a *Analyzer) Results() (map[string]value.Type, []Diagnostic) {
+	types := a.processUsages()
+	return types, a.diagnostics
+}
+
+// File analyzes a single file and records usages/diagnostics.
+// Safe for concurrent calls with other AnalyzeFile or Finalize calls (with proper locking).
+func (a *Analyzer) File(file *ast.File) {
+	a.checkStmts(file.Stmts)
 }
 
 // processUsages finalizes type inference for all recorded variable usages.
@@ -29,7 +43,7 @@ func (tv TypeVar) String() string {
 // traversal of the AST is complete, this function aggregates all collected
 // usages to infer each variable's most likely type and emit diagnostics for
 // all other wrong usages.
-func (a *analyzer) processUsages() map[string]value.Type {
+func (a *Analyzer) processUsages() map[string]value.Type {
 	types := make(map[string]value.Type, len(a.usages))
 	for name, uses := range a.usages {
 		var typeCount [value.TypeFunction]uint
@@ -60,32 +74,13 @@ func (a *analyzer) processUsages() map[string]value.Type {
 	return types
 }
 
-// CheckFile performs static analysis on the given parsed file and returns a
-// mapping of variable names to their inferred value types and list of
-// diagnostics representing detected type mismatches or invalid usages.
-//
-// A variable's final inferred type is determined by majority voting among all
-// its observed usages. If conflicting usages exist, diagnostics are emitted
-// describing the mismatch. The function also detects misuse of built-ins,
-// invalid operations (e.g. comparing incompatible types), and improper
-// argument types in function calls.
-func CheckFile(file *ast.File) (map[string]value.Type, []Diagnostic) {
-	a := analyzer{
-		usages: make(map[string][]Usage),
-	}
-	a.checkStmts(file.Stmts)
-
-	types := a.processUsages()
-	return types, a.diagnostics
-}
-
-func (a *analyzer) checkStmts(stmts []ast.Stmt) {
+func (a *Analyzer) checkStmts(stmts []ast.Stmt) {
 	for _, s := range stmts {
 		a.checkStmt(s)
 	}
 }
 
-func (a *analyzer) checkStmt(stmt ast.Stmt) {
+func (a *Analyzer) checkStmt(stmt ast.Stmt) {
 	switch s := stmt.(type) {
 	case *ast.Text:
 		// Skip
@@ -170,7 +165,7 @@ func (a *analyzer) checkStmt(stmt ast.Stmt) {
 // later). A nil result indicates the expression could not be typed, in
 // which case callers should skip further analysis.
 // TODO(skewb1k): avoid using any to represent `[value.Type] | [TypeVar]`.
-func (a *analyzer) checkExpr(expr ast.Expr) any {
+func (a *Analyzer) checkExpr(expr ast.Expr) any {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
 		switch e.Kind {
@@ -321,7 +316,7 @@ func (a *analyzer) checkExpr(expr ast.Expr) any {
 // ensures argument count and types match the builtin definition, producing
 // diagnostics on mismatch. Returns the function’s declared return type if
 // found, or nil on failure.
-func (a *analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
+func (a *Analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
 	fn, err := builtin.LookupFunction(ident)
 	if err != nil {
 		a.addDiagnostic(BuiltinNotFound{
@@ -376,7 +371,7 @@ func (a *analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
 // type. If the expression is a variable reference, the usage is recorded for
 // later inference. If it's a literal or typed expression, a diagnostic is
 // emitted when mismatched.
-func (a *analyzer) expectType(t any, u Usage) {
+func (a *Analyzer) expectType(t any, u Usage) {
 	switch xx := t.(type) {
 	case value.Type:
 		if xx != u.Type {
@@ -391,10 +386,14 @@ func (a *analyzer) expectType(t any, u Usage) {
 	}
 }
 
-func (a *analyzer) addUsage(varName string, u Usage) {
+func (a *Analyzer) addUsage(varName string, u Usage) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	a.usages[varName] = append(a.usages[varName], u)
 }
 
-func (a *analyzer) addDiagnostic(d Diagnostic) {
+func (a *Analyzer) addDiagnostic(d Diagnostic) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
 	a.diagnostics = append(a.diagnostics, d)
 }

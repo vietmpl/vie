@@ -30,6 +30,10 @@ func TestTypes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			_, diagnostics := tmpl.Analyze()
+			if diagnostics != nil {
+				t.Fatalf("unexpected diagnostics %v", diagnostics)
+			}
 			files, err := tmpl.Render(nil)
 			if err != nil {
 				t.Fatal(err)
