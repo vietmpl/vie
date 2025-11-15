@@ -62,18 +62,6 @@ func (p parser) stmt() ast.Stmt {
 		if len(b) == 0 {
 			return nil
 		}
-		// TODO(skewb1k): store state about encountered tag node instead of this.
-		if p.GotoPreviousSibling() {
-			// Trim leading spaces and tabs up to and including the first newline if the previous node is a tag.
-			// 'text' nodes cannot follow another 'text', so the previous node must be a tag.
-			if p.Node().Kind() != "render" {
-				b = bytes.TrimLeft(b, " \t")
-				if len(b) > 0 && b[0] == '\n' {
-					b = b[1:]
-				}
-			}
-			p.GotoNextSibling()
-		}
 		// TODO(skewb1k): factor out to parser.Peek().
 		if p.GotoNextSibling() {
 			// Trim trail spaces and tabs up to and including the first newline if the previous node is a tag.
