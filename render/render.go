@@ -37,6 +37,9 @@ func (r *renderer) renderStmt(stmt ast.Stmt) {
 	case *ast.Text:
 		_, _ = io.WriteString(r.w, s.Value)
 
+	case *ast.Comment:
+		// Comments do not produce output.
+
 	case *ast.RenderStmt:
 		x := r.evalExpr(s.X)
 		xv := x.(value.String)

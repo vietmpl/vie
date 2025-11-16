@@ -30,6 +30,9 @@ func (f *formatter) stmt(s ast.Stmt) {
 	case *ast.Text:
 		io.WriteString(f.w, n.Value)
 
+	case *ast.Comment:
+		io.WriteString(f.w, n.Content)
+
 	case *ast.RenderStmt:
 		io.WriteString(f.w, "{{ ")
 		f.expr(n.X)

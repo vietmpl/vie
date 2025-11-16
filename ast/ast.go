@@ -61,6 +61,7 @@ type (
 )
 
 func (*Text) stmtNode()       {}
+func (*Comment) stmtNode()    {}
 func (*RenderStmt) stmtNode() {}
 func (*IfStmt) stmtNode()     {}
 func (*SwitchStmt) stmtNode() {}
@@ -151,6 +152,7 @@ func (s *CallExpr) Pos() Pos   { return s.Func.Pos() }
 func (s *PipeExpr) Pos() Pos   { return s.Arg.Pos() }
 
 func (*Text) node()       {}
+func (*Comment) node()    {}
 func (*RenderStmt) node() {}
 func (*IfStmt) node()     {}
 func (*SwitchStmt) node() {}

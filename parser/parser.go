@@ -64,9 +64,10 @@ func (p parser) stmt() ast.Stmt {
 		}
 		// TODO(skewb1k): factor out to parser.Peek().
 		if p.GotoNextSibling() {
-			// Trim trail spaces and tabs up to and including the first newline if the previous node is a tag.
-			// 'text' nodes cannot follow another 'text', so the previous node must be a tag.
-			if p.Node().Kind() != "render" {
+			// Trim trail spaces and tabs up to and including the first newline
+			// if the previous node is a tag. 'text' nodes cannot follow
+			// another 'text', so the next node must be a tag.
+			if p.Node().Kind() != "render" && p.Node().Kind() != "comment" {
 				b = bytes.TrimRight(b, " \t")
 				if len(b) > 0 && b[len(b)-1] != '\n' {
 					b = append(b, '\n')
@@ -79,6 +80,11 @@ func (p parser) stmt() ast.Stmt {
 		}
 		return &ast.Text{
 			Value: string(b),
+		}
+
+	case "comment":
+		return &ast.Comment{
+			Content: p.nodeContent(n),
 		}
 
 	case "render":
