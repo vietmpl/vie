@@ -31,7 +31,10 @@ func (f *formatter) stmt(s ast.Stmt) {
 		io.WriteString(f.w, n.Value)
 
 	case *ast.Comment:
+		// TODO(skewb1k): format leading/trailing whitespaces.
+		io.WriteString(f.w, "{#")
 		io.WriteString(f.w, n.Content)
+		io.WriteString(f.w, "#}")
 
 	case *ast.RenderStmt:
 		io.WriteString(f.w, "{{ ")

@@ -110,6 +110,8 @@ github.com/vietmpl/tree-sitter-vie v0.2.1 h1:26U6U5PKKHmtVZuzR6IiJBTx3BsOggy8k4y
 github.com/vietmpl/tree-sitter-vie v0.2.1/go.mod h1:ryJ+4kFd+wFHJcmpSsT7bS2HJHQg9dOCAajnrGTIB5c=
 github.com/vietmpl/tree-sitter-vie v0.2.3 h1:haI9hhEOfNHCXuXr6zUwFDh5v+Id2cCM8VdtIJAtxU4=
 github.com/vietmpl/tree-sitter-vie v0.2.3/go.mod h1:ryJ+4kFd+wFHJcmpSsT7bS2HJHQg9dOCAajnrGTIB5c=
+github.com/vietmpl/tree-sitter-vie v0.2.4-0.20251116163037-c7f4e18a886e h1:kieG80atBz+feoOY47imbNUZOiMnjEavB2Uz0b3sX00=
+github.com/vietmpl/tree-sitter-vie v0.2.4-0.20251116163037-c7f4e18a886e/go.mod h1:ryJ+4kFd+wFHJcmpSsT7bS2HJHQg9dOCAajnrGTIB5c=
 github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e h1:JVG44RsyaB9T2KIHavMF/ppJZNG9ZpyihvCd0w101no=
 github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e/go.mod h1:RbqR21r5mrJuqunuUZ/Dhy/avygyECGrLceyNeo4LiM=
 golang.org/x/exp v0.0.0-20231006140011-7918f672742d h1:jtJma62tbqLibJ5sFQz8bKtEM8rJBtfilJ2qTU199MI=

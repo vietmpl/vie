@@ -8,7 +8,7 @@ require (
 	github.com/spf13/cobra v1.10.1
 	github.com/stretchr/testify v1.11.1
 	github.com/tree-sitter/go-tree-sitter v0.25.0
-	github.com/vietmpl/tree-sitter-vie v0.2.3
+	github.com/vietmpl/tree-sitter-vie v0.2.4-0.20251116163037-c7f4e18a886e
 )
 
 require (
