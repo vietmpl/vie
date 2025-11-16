@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vietmpl/vie/format"
+	cli "github.com/vietmpl/vie/internal/cli/lib"
 	"github.com/vietmpl/vie/parser"
 )
 
@@ -18,7 +19,7 @@ func formatCmd() *cobra.Command {
 	var stdin bool
 
 	cmd := &cobra.Command{
-		Use:  "format <path>",
+		Use:  "format <template-name | path>",
 		Args: cobra.MaximumNArgs(1), // 0 if --stdin, 1 otherwise
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if stdin {
@@ -44,7 +45,39 @@ func formatCmd() *cobra.Command {
 			if len(args) != 1 {
 				return fmt.Errorf("expected at least one file or directory argument")
 			}
+
+			dist, err := os.Getwd()
+			if err != nil {
+				return err
+			}
+
+			currentPath, err := filepath.Abs(dist)
+			if err != nil {
+				return err
+			}
+
+			root := filepath.VolumeName(currentPath)
+			if root == "" {
+				root = "/"
+			} else {
+				root = root + string(filepath.Separator)
+			}
+
+			fsys := os.DirFS(root)
+
+			relPath, err := filepath.Rel(root, currentPath)
+			if err != nil {
+				return err
+			}
+			if relPath == "." {
+				relPath = ""
+			}
+
+			result := cli.SearchTemplate(fsys, relPath, args[0])
 			path := args[0]
+			if result != "" {
+				path = filepath.Join(root, result)
+			}
 
 			info, err := os.Stat(path)
 			if err != nil {

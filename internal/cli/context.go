@@ -16,6 +16,7 @@ func printDiagnostics(path string, diagnostics []analysis.Diagnostic) {
 	}
 }
 
+// TODO(skewb1k): support dirs (templates)
 func contextCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:  "context <path>",
