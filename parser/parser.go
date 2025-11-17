@@ -13,12 +13,13 @@ import (
 type parser struct {
 	*ts.TreeCursor
 
-	src []byte
+	src  []byte
+	path string
 }
 
 var language = ts.NewLanguage(tree_sitter_vie.Language())
 
-func ParseBytes(src []byte) (*ast.File, error) {
+func ParseBytes(src []byte, path string) (*ast.File, error) {
 	tsParser := ts.NewParser()
 	_ = tsParser.SetLanguage(language)
 	defer tsParser.Close()
@@ -32,6 +33,7 @@ func ParseBytes(src []byte) (*ast.File, error) {
 	p := parser{
 		TreeCursor: cursor,
 		src:        src,
+		path:       path,
 	}
 
 	var f ast.File
@@ -59,8 +61,8 @@ func (p parser) parseStmt() ast.Stmt {
 	}
 	if n.IsError() {
 		return &ast.BadStmt{
-			From: posFromTsPoint(n.StartPosition()),
-			To:   posFromTsPoint(n.EndPosition()),
+			From: p.posFromTsPoint(n.StartPosition()),
+			To:   p.posFromTsPoint(n.EndPosition()),
 		}
 	}
 	// TODO(skewb1k): use KindId instead of string comparisons.
@@ -102,9 +104,9 @@ func (p parser) parseStmt() ast.Stmt {
 		commentNode := p.Node()
 		if commentNode.IsError() {
 			return &ast.BadStmt{
-				From: posFromTsPoint(n.StartPosition()),
+				From: p.posFromTsPoint(n.StartPosition()),
 				// TODO(skewb1k): include final '#}' in the range.
-				To: posFromTsPoint(commentNode.EndPosition()),
+				To: p.posFromTsPoint(commentNode.EndPosition()),
 			}
 		}
 		if commentNode.Kind() == "comment" {
@@ -125,8 +127,8 @@ func (p parser) parseStmt() ast.Stmt {
 		nn := p.Node()
 		if nn.IsError() {
 			renderStmt.X = &ast.BadExpr{
-				From: posFromTsPoint(nn.StartPosition()),
-				To:   posFromTsPoint(nn.EndPosition()),
+				From: p.posFromTsPoint(nn.StartPosition()),
+				To:   p.posFromTsPoint(nn.EndPosition()),
 			}
 		}
 		return &renderStmt
@@ -158,8 +160,8 @@ func (p parser) parseStmt() ast.Stmt {
 				nn := p.Node()
 				if nn.IsError() {
 					elseIf.Cond = &ast.BadExpr{
-						From: posFromTsPoint(from),
-						To:   posFromTsPoint(nn.EndPosition()),
+						From: p.posFromTsPoint(from),
+						To:   p.posFromTsPoint(nn.EndPosition()),
 					}
 				}
 				p.GotoParent()
@@ -205,8 +207,8 @@ func (p parser) parseStmt() ast.Stmt {
 			case "end_tag":
 				if bad {
 					return &ast.BadStmt{
-						From: posFromTsPoint(n.StartPosition()),
-						To:   posFromTsPoint(p.Node().EndPosition()),
+						From: p.posFromTsPoint(n.StartPosition()),
+						To:   p.posFromTsPoint(p.Node().EndPosition()),
 					}
 				}
 				return &ifStmt
@@ -221,8 +223,8 @@ func (p parser) parseStmt() ast.Stmt {
 		// TODO(skewb1k): restore TSCursor to the last valid node rather than
 		// advancing to EOF when an end_tag is missing.
 		return &ast.BadStmt{
-			From: posFromTsPoint(n.StartPosition()),
-			To:   posFromTsPoint(p.Node().EndPosition()),
+			From: p.posFromTsPoint(n.StartPosition()),
+			To:   p.posFromTsPoint(p.Node().EndPosition()),
 		}
 
 	case "switch_tag":
@@ -250,8 +252,8 @@ func (p parser) parseStmt() ast.Stmt {
 				nn := p.Node()
 				if nn.IsError() {
 					caseClause.List = append(caseClause.List, &ast.BadExpr{
-						From: posFromTsPoint(nn.StartPosition()),
-						To:   posFromTsPoint(nn.EndPosition()),
+						From: p.posFromTsPoint(nn.StartPosition()),
+						To:   p.posFromTsPoint(nn.EndPosition()),
 					})
 				}
 				p.GotoParent()
@@ -272,8 +274,8 @@ func (p parser) parseStmt() ast.Stmt {
 			case "end_tag":
 				if bad {
 					return &ast.BadStmt{
-						From: posFromTsPoint(n.StartPosition()),
-						To:   posFromTsPoint(p.Node().EndPosition()),
+						From: p.posFromTsPoint(n.StartPosition()),
+						To:   p.posFromTsPoint(p.Node().EndPosition()),
 					}
 				}
 				return &switchStmt
@@ -288,14 +290,14 @@ func (p parser) parseStmt() ast.Stmt {
 		// TODO(skewb1k): restore TSCursor to the last valid node rather than
 		// advancing to EOF when an end_tag is missing.
 		return &ast.BadStmt{
-			From: posFromTsPoint(n.StartPosition()),
-			To:   posFromTsPoint(n.EndPosition()),
+			From: p.posFromTsPoint(n.StartPosition()),
+			To:   p.posFromTsPoint(n.EndPosition()),
 		}
 
 	case "end_tag", "else_if_tag", "else_tag", "case_tag":
 		return &ast.BadStmt{
-			From: posFromTsPoint(n.StartPosition()),
-			To:   posFromTsPoint(n.EndPosition()),
+			From: p.posFromTsPoint(n.StartPosition()),
+			To:   p.posFromTsPoint(n.EndPosition()),
 		}
 
 	default:
@@ -307,28 +309,28 @@ func (p parser) parseExpr() ast.Expr {
 	n := p.Node()
 	if n.IsError() || n.IsMissing() {
 		return &ast.BadExpr{
-			From: posFromTsPoint(n.StartPosition()),
-			To:   posFromTsPoint(n.EndPosition()),
+			From: p.posFromTsPoint(n.StartPosition()),
+			To:   p.posFromTsPoint(n.EndPosition()),
 		}
 	}
 	switch n.Kind() {
 	case "string_literal":
 		return &ast.BasicLit{
-			ValuePos: posFromTsPoint(n.StartPosition()),
+			ValuePos: p.posFromTsPoint(n.StartPosition()),
 			Kind:     ast.KindString,
 			Value:    p.nodeContent(n),
 		}
 
 	case "boolean_literal":
 		return &ast.BasicLit{
-			ValuePos: posFromTsPoint(n.StartPosition()),
+			ValuePos: p.posFromTsPoint(n.StartPosition()),
 			Kind:     ast.KindBool,
 			Value:    p.nodeContent(n),
 		}
 
 	case "identifier":
 		return &ast.Ident{
-			NamePos: posFromTsPoint(n.StartPosition()),
+			NamePos: p.posFromTsPoint(n.StartPosition()),
 			Name:    p.nodeContent(n),
 		}
 
@@ -338,7 +340,7 @@ func (p parser) parseExpr() ast.Expr {
 		var unary ast.UnaryExpr
 
 		nn := p.Node()
-		unary.OpPos = posFromTsPoint(nn.StartPosition())
+		unary.OpPos = p.posFromTsPoint(nn.StartPosition())
 		unary.Op = ast.ParseUnOpKind(string(p.nodeContent(nn)))
 
 		p.GotoNextSibling()
@@ -368,7 +370,7 @@ func (p parser) parseExpr() ast.Expr {
 
 		nn := p.Node()
 		call.Func = ast.Ident{
-			NamePos: posFromTsPoint(nn.StartPosition()),
+			NamePos: p.posFromTsPoint(nn.StartPosition()),
 			Name:    p.nodeContent(nn),
 		}
 		p.GotoNextSibling()
@@ -395,7 +397,7 @@ func (p parser) parseExpr() ast.Expr {
 		defer p.GotoParent()
 		var paren ast.ParenExpr
 
-		paren.Lparen = posFromTsPoint(p.Node().StartPosition())
+		paren.Lparen = p.posFromTsPoint(p.Node().StartPosition())
 		p.GotoNextSibling()
 
 		paren.X = p.parseExpr()
@@ -407,8 +409,8 @@ func (p parser) parseExpr() ast.Expr {
 	// unrecognized TSKind, instead of silently producing a placeholder.
 	default:
 		return &ast.BadExpr{
-			From: posFromTsPoint(n.StartPosition()),
-			To:   posFromTsPoint(n.EndPosition()),
+			From: p.posFromTsPoint(n.StartPosition()),
+			To:   p.posFromTsPoint(n.EndPosition()),
 		}
 		// panic(fmt.Sprintf("parser: unexpected expr kind %q while parsing %s", n.Kind(), p.src))
 	}
@@ -434,9 +436,10 @@ func (p parser) nodeContent(n *ts.Node) string {
 	return string(p.src[n.StartByte():n.EndByte()])
 }
 
-func posFromTsPoint(p ts.Point) ast.Pos {
+func (p parser) posFromTsPoint(point ts.Point) ast.Pos {
 	return ast.Pos{
-		Line:      p.Row,
-		Character: p.Column,
+		Path:      p.path,
+		Line:      point.Row,
+		Character: point.Column,
 	}
 }
