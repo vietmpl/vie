@@ -35,6 +35,13 @@ type File struct {
 // Statements ----------------------------------------
 
 type (
+	// A BadStmt node is a placeholder for statements containing
+	// syntax errors for which no correct statement nodes can be
+	// created.
+	BadStmt struct {
+		From, To Pos // position range of bad statement
+	}
+
 	Text struct {
 		Value string
 	}
@@ -60,13 +67,14 @@ type (
 	}
 )
 
+func (*BadStmt) stmtNode()    {}
 func (*Text) stmtNode()       {}
 func (*Comment) stmtNode()    {}
 func (*RenderStmt) stmtNode() {}
 func (*IfStmt) stmtNode()     {}
 func (*SwitchStmt) stmtNode() {}
 
-// Clauses Part of a larger statement but does not implement [Stmt] itself.
+// Clauses are part of a larger statement but does not implement [Stmt] itself.
 type (
 	// ElseIfClause represents an `else if` branch inside an [IfStmt].
 	ElseIfClause struct {
@@ -96,6 +104,13 @@ const (
 )
 
 type (
+	// A BadExpr node is a placeholder for an expression containing
+	// syntax errors for which a correct expression node cannot be
+	// created.
+	BadExpr struct {
+		From, To Pos // position range of bad expression
+	}
+
 	BasicLit struct {
 		ValuePos Pos
 		Kind     BasicLitKind
@@ -135,6 +150,7 @@ type (
 	}
 )
 
+func (*BadExpr) exprNode()    {}
 func (*BasicLit) exprNode()   {}
 func (*Ident) exprNode()      {}
 func (*UnaryExpr) exprNode()  {}
@@ -143,14 +159,17 @@ func (*ParenExpr) exprNode()  {}
 func (*CallExpr) exprNode()   {}
 func (*PipeExpr) exprNode()   {}
 
-func (s *BasicLit) Pos() Pos   { return s.ValuePos }
-func (s *Ident) Pos() Pos      { return s.NamePos }
-func (s *UnaryExpr) Pos() Pos  { return s.OpPos }
-func (s *BinaryExpr) Pos() Pos { return s.X.Pos() }
-func (s *ParenExpr) Pos() Pos  { return s.Lparen }
-func (s *CallExpr) Pos() Pos   { return s.Func.Pos() }
-func (s *PipeExpr) Pos() Pos   { return s.Arg.Pos() }
+func (x *BadExpr) Pos() Pos    { return x.From }
+func (x *BasicLit) Pos() Pos   { return x.ValuePos }
+func (x *Ident) Pos() Pos      { return x.NamePos }
+func (x *UnaryExpr) Pos() Pos  { return x.OpPos }
+func (x *BinaryExpr) Pos() Pos { return x.X.Pos() }
+func (x *ParenExpr) Pos() Pos  { return x.Lparen }
+func (x *CallExpr) Pos() Pos   { return x.Func.Pos() }
+func (x *PipeExpr) Pos() Pos   { return x.Arg.Pos() }
 
+func (*BadExpr) node()    {}
+func (*BadStmt) node()    {}
 func (*Text) node()       {}
 func (*Comment) node()    {}
 func (*RenderStmt) node() {}
