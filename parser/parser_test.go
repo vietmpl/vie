@@ -3,6 +3,8 @@ package parser_test
 import (
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -650,6 +652,68 @@ func TestParseBytes(t *testing.T) {
 				t.Fatal(err)
 			}
 			assert.Equal(t, cases[name].file, f)
+		})
+	}
+}
+
+// TestParseBytesFuzzTruncate checks that ParseBytes never panics on incomplete
+// or slightly modified input. It concatenates all files in "testdata", then
+// tests truncating from the start, truncating from the end, and removing each
+// character.
+func TestParseBytesFuzzTruncate(t *testing.T) {
+	t.Parallel()
+
+	files, err := filepath.Glob("testdata/*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	sort.Strings(files)
+
+	var combined []byte
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		combined = append(combined, b...)
+	}
+
+	src := combined
+
+	// Truncate from start
+	for i := range src {
+		t.Run("start_"+strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
+			fragment := src[i:]
+			_, err := parser.ParseBytes(fragment)
+			if err != nil {
+				t.Fatalf("unexpected error at length %d: %v", i, err)
+			}
+		})
+	}
+
+	// Truncate from end
+	for i := len(src); i >= 0; i-- {
+		t.Run("end_"+strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
+			fragment := src[:i]
+			_, err := parser.ParseBytes(fragment)
+			if err != nil {
+				t.Fatalf("unexpected error at length %d: %v", i, err)
+			}
+		})
+	}
+
+	// Remove one character at each position
+	for i := range src {
+		t.Run("remove_"+strconv.Itoa(i), func(t *testing.T) {
+			t.Parallel()
+			fragment := append([]byte(nil), src[:i]...)
+			fragment = append(fragment, src[i+1:]...)
+			_, err := parser.ParseBytes(fragment)
+			if err != nil {
+				t.Fatalf("unexpected error after removing index %d: %v", i, err)
+			}
 		})
 	}
 }

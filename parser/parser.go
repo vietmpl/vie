@@ -292,14 +292,14 @@ func (p parser) parseStmt() ast.Stmt {
 			To:   posFromTsPoint(n.EndPosition()),
 		}
 
-	case "end_tag", "case_tag":
+	case "end_tag", "else_if_tag", "else_tag", "case_tag":
 		return &ast.BadStmt{
 			From: posFromTsPoint(n.StartPosition()),
 			To:   posFromTsPoint(n.EndPosition()),
 		}
 
 	default:
-		panic(fmt.Sprintf("parser: unexpected stmt kind %s while parsing %q", n.Kind(), p.src))
+		panic(fmt.Sprintf("parser: unexpected stmt kind %q while parsing %s", n.Kind(), p.src))
 	}
 }
 
@@ -401,8 +401,16 @@ func (p parser) parseExpr() ast.Expr {
 		paren.X = p.parseExpr()
 		return &paren
 
+	// case "render","end_tag", "else_if_tag", "else_tag", "case_tag":
+
+	// TODO(skewb1k): ideally, we should panic when encountering an
+	// unrecognized TSKind, instead of silently producing a placeholder.
 	default:
-		panic(fmt.Sprintf("parser: unexpected expr kind %s while parsing %q", n.Kind(), p.src))
+		return &ast.BadExpr{
+			From: posFromTsPoint(n.StartPosition()),
+			To:   posFromTsPoint(n.EndPosition()),
+		}
+		// panic(fmt.Sprintf("parser: unexpected expr kind %q while parsing %s", n.Kind(), p.src))
 	}
 }
 
