@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/google/go-cmp/cmp"
 
 	. "github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/parser"
@@ -651,7 +651,9 @@ func TestParseBytes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			assert.Equal(t, cases[name].file, f)
+			if diff := cmp.Diff(cases[name].file, f); diff != "" {
+				t.Errorf("(-want +got):\n%s", diff)
+			}
 		})
 	}
 }

@@ -3,13 +3,13 @@ package builtin
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/google/go-cmp/cmp"
 	"github.com/vietmpl/vie/value"
 )
 
 type testCase struct {
-	input    value.String
-	expected value.String
+	input value.String
+	want  value.String
 }
 
 func runFuncTests(t *testing.T, fn func([]value.Value) value.Value, cases []testCase) {
@@ -17,8 +17,11 @@ func runFuncTests(t *testing.T, fn func([]value.Value) value.Value, cases []test
 	for _, tt := range cases {
 		t.Run(string(tt.input), func(t *testing.T) {
 			t.Parallel()
-			actual := fn([]value.Value{tt.input})
-			assert.Equal(t, tt.expected, actual)
+			got := fn([]value.Value{tt.input})
+
+			if diff := cmp.Diff(tt.want, got); diff != "" {
+				t.Errorf("(-want +got):\n%s", diff)
+			}
 		})
 	}
 }

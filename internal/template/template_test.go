@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/google/go-cmp/cmp"
 	"github.com/vietmpl/vie/internal/template"
 )
 
@@ -63,7 +63,9 @@ func TestTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			assert.Equal(t, expected, files)
+			if diff := cmp.Diff(expected, files); diff != "" {
+				t.Errorf("(-want +got):\n%s", diff)
+			}
 		})
 	}
 }

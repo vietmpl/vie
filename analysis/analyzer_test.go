@@ -5,8 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
+	"github.com/google/go-cmp/cmp"
 	. "github.com/vietmpl/vie/analysis"
 	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/parser"
@@ -22,18 +21,18 @@ func TestTypes(t *testing.T) {
 	}
 
 	type testCase struct {
-		typemap     map[string]Type
-		diagnostics []Diagnostic
+		Typemap     map[string]Type
+		Diagnostics []Diagnostic
 	}
 
 	cases := map[string]testCase{
 		"render": {
-			typemap: map[string]Type{
+			Typemap: map[string]Type{
 				"name": TypeString,
 				"a":    TypeString,
 				"b":    TypeString,
 			},
-			diagnostics: []Diagnostic{
+			Diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeString,
 					GotType:  TypeBool,
@@ -45,7 +44,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"if": {
-			typemap: map[string]Type{
+			Typemap: map[string]Type{
 				"a1": TypeBool,
 				"a2": TypeBool,
 				"b2": TypeBool,
@@ -53,7 +52,7 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"binary": {
-			typemap: map[string]Type{
+			Typemap: map[string]Type{
 				"a": TypeBool,
 				"b": TypeBool,
 				"c": TypeBool,
@@ -64,14 +63,14 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"parens": {
-			typemap: map[string]Type{
+			Typemap: map[string]Type{
 				"a": TypeString,
 				"b": TypeString,
 			},
 		},
 		"concatenate-bool-str": {
-			typemap: map[string]Type{},
-			diagnostics: []Diagnostic{
+			Typemap: map[string]Type{},
+			Diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeString,
 					GotType:  TypeBool,
@@ -83,8 +82,8 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"non-bool-if": {
-			typemap: map[string]Type{},
-			diagnostics: []Diagnostic{
+			Typemap: map[string]Type{},
+			Diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeBool,
 					GotType:  TypeString,
@@ -96,8 +95,8 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"non-bool-not": {
-			typemap: map[string]Type{},
-			diagnostics: []Diagnostic{
+			Typemap: map[string]Type{},
+			Diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeBool,
 					GotType:  TypeString,
@@ -109,8 +108,8 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"cross-var": {
-			typemap: map[string]Type{},
-			diagnostics: []Diagnostic{
+			Typemap: map[string]Type{},
+			Diagnostics: []Diagnostic{
 				CrossVarTyping{
 					X: TypeVar("a"),
 					Y: TypeVar("b"),
@@ -122,10 +121,10 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"multiple-usages": {
-			typemap: map[string]Type{
+			Typemap: map[string]Type{
 				"a": TypeBool,
 			},
-			diagnostics: []Diagnostic{
+			Diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeString,
 					GotType:  TypeBool,
@@ -137,10 +136,10 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"equal-usages": {
-			typemap: map[string]Type{
+			Typemap: map[string]Type{
 				"a": TypeString,
 			},
-			diagnostics: []Diagnostic{
+			Diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeBool,
 					GotType:  TypeString,
@@ -160,18 +159,18 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"call": {
-			typemap: map[string]Type{
+			Typemap: map[string]Type{
 				"a": TypeString,
 			},
 		},
 		"pipe": {
-			typemap: map[string]Type{
+			Typemap: map[string]Type{
 				"a": TypeString,
 			},
 		},
 		"incorrect-arg-count": {
-			typemap: map[string]Type{},
-			diagnostics: []Diagnostic{
+			Typemap: map[string]Type{},
+			Diagnostics: []Diagnostic{
 				IncorrectArgCount{
 					FuncName: "@upper",
 					Want:     1,
@@ -184,8 +183,8 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"incorrect-arg-count-with-var": {
-			typemap: map[string]Type{},
-			diagnostics: []Diagnostic{
+			Typemap: map[string]Type{},
+			Diagnostics: []Diagnostic{
 				IncorrectArgCount{
 					FuncName: "@upper",
 					Want:     1,
@@ -198,8 +197,8 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"func-not-found": {
-			typemap: map[string]Type{},
-			diagnostics: []Diagnostic{
+			Typemap: map[string]Type{},
+			Diagnostics: []Diagnostic{
 				BuiltinNotFound{
 					Name: "@undefined_func",
 					Msg:  "function @undefined_func is undefined",
@@ -211,8 +210,8 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"call-undefined": {
-			typemap: map[string]Type{},
-			diagnostics: []Diagnostic{
+			Typemap: map[string]Type{},
+			Diagnostics: []Diagnostic{
 				BuiltinNotFound{
 					Name: "@undefined_func",
 					Msg:  "function @undefined_func is undefined",
@@ -224,8 +223,8 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"wrong-use-call-undefined": {
-			typemap: map[string]Type{},
-			diagnostics: []Diagnostic{
+			Typemap: map[string]Type{},
+			Diagnostics: []Diagnostic{
 				BuiltinNotFound{
 					Name: "@undefined_func",
 					Msg:  "function @undefined_func is undefined",
@@ -255,14 +254,19 @@ func TestTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 
+			want := cases[name]
+
 			analyzer := NewAnalyzer()
 			analyzer.File(f)
 			typemap, diagnostics := analyzer.Results()
+			got := testCase{
+				Typemap:     typemap,
+				Diagnostics: diagnostics,
+			}
 
-			assert.Equal(t, cases[name], testCase{
-				typemap:     typemap,
-				diagnostics: diagnostics,
-			})
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("(-want +got):\n%s", diff)
+			}
 		})
 	}
 }
