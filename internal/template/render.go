@@ -23,11 +23,12 @@ func (t Template) Render(context map[string]value.Value) (map[string][]byte, err
 		if f.ContentAST != nil {
 			path = strings.TrimSuffix(path, ".vie")
 			render.MustRenderFile(&buf, f.ContentAST, context)
+			bytes := append([]byte(nil), buf.Bytes()...) // copy
+			buf.Reset()
 			if _, ok := files[path]; ok {
 				return fmt.Errorf("%s conflicts", path)
 			}
-			files[path] = buf.Bytes()
-			buf.Reset()
+			files[path] = bytes
 		} else {
 			files[path] = f.Content
 		}
