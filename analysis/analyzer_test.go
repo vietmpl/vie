@@ -250,7 +250,7 @@ func TestTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			f, err := parser.ParseBytes(input)
+			f, err := parser.ParseBytes(input, "")
 			if err != nil {
 				t.Fatal(err)
 			}

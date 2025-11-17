@@ -37,7 +37,7 @@ func renderCmd() *cobra.Command {
 				return err
 			}
 
-			f, err := parser.ParseBytes(src)
+			f, err := parser.ParseBytes(src, path)
 			if err != nil {
 				return err
 			}
@@ -51,7 +51,7 @@ func renderCmd() *cobra.Command {
 			analyzer.File(f)
 			tm, diagnostics := analyzer.Results()
 			if diagnostics != nil {
-				printDiagnostics(path, diagnostics)
+				printDiagnostics(diagnostics)
 				return nil
 			}
 

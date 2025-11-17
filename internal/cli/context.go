@@ -9,10 +9,10 @@ import (
 	"github.com/vietmpl/vie/parser"
 )
 
-func printDiagnostics(path string, diagnostics []analysis.Diagnostic) {
+func printDiagnostics(diagnostics []analysis.Diagnostic) {
 	for _, d := range diagnostics {
 		pos := d.Pos()
-		fmt.Printf("%s:%d:%d: %s\n", path, pos.Line, pos.Character, d.String())
+		fmt.Printf("%s:%d:%d: %s\n", pos.Path, pos.Line, pos.Character, d.String())
 	}
 }
 
@@ -28,7 +28,7 @@ func contextCmd() *cobra.Command {
 				return err
 			}
 
-			f, err := parser.ParseBytes(src)
+			f, err := parser.ParseBytes(src, path)
 			if err != nil {
 				return err
 			}
@@ -37,7 +37,7 @@ func contextCmd() *cobra.Command {
 			analyzer.File(f)
 			tm, diagnostics := analyzer.Results()
 			if diagnostics != nil {
-				printDiagnostics(path, diagnostics)
+				printDiagnostics(diagnostics)
 				return nil
 			}
 			// TODO(skewb1k): improve output format.

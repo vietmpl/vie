@@ -15,7 +15,7 @@ func TestSource(t *testing.T) {
 	golden.Run(t, func(t *testing.T, input []byte) []byte {
 		t.Parallel()
 
-		f, err := parser.ParseBytes(input)
+		f, err := parser.ParseBytes(input, "")
 		if err != nil {
 			t.Fatal(err)
 		}

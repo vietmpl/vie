@@ -26,7 +26,7 @@ func formatCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				formatted, err := formatBytes(src)
+				formatted, err := formatBytes(src, "")
 				if err != nil {
 					return err
 				}
@@ -104,7 +104,7 @@ func formatFile(path string, check bool) (changed bool, err error) {
 	if err != nil {
 		return
 	}
-	formatted, err := formatBytes(src)
+	formatted, err := formatBytes(src, path)
 	if err != nil {
 		return
 	}
@@ -133,8 +133,8 @@ func formatFile(path string, check bool) (changed bool, err error) {
 }
 
 // TODO(skewb1k): consider moving this under the vie/format package.
-func formatBytes(src []byte) ([]byte, error) {
-	parsed, err := parser.ParseBytes(src)
+func formatBytes(src []byte, path string) ([]byte, error) {
+	parsed, err := parser.ParseBytes(src, path)
 	if err != nil {
 		return nil, err
 	}
