@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/vietmpl/vie/internal/template"
+	"github.com/vietmpl/vie/value"
 )
 
 func TestTypes(t *testing.T) {
@@ -15,6 +16,23 @@ func TestTypes(t *testing.T) {
 	entries, err := os.ReadDir("testdata")
 	if err != nil {
 		t.Fatal(err)
+	}
+
+	type testCase struct {
+		context map[string]value.Value
+	}
+
+	cases := map[string]testCase{
+		"filename-placeholder": {
+			context: map[string]value.Value{
+				"file": value.String("test"),
+			},
+		},
+		"dirname-placeholder": {
+			context: map[string]value.Value{
+				"dir": value.String("test"),
+			},
+		},
 	}
 
 	for _, e := range entries {
@@ -31,10 +49,12 @@ func TestTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 			_, diagnostics := tmpl.Analyze()
-			if diagnostics != nil {
+			if len(diagnostics) > 0 {
 				t.Fatalf("unexpected diagnostics %v", diagnostics)
 			}
-			files, err := tmpl.Render(nil)
+			println(name)
+			context := cases[name].context
+			files, err := tmpl.Render(context)
 			if err != nil {
 				t.Fatal(err)
 			}
