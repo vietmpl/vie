@@ -1,0 +1,13 @@
+# Non-pretty input file is rewritten correctly
+
+exec vie format non-pretty.vie
+! stderr .
+stdout ^non-pretty.vie$
+cmp non-pretty.vie pretty.vie
+
+-- non-pretty.vie --
+{{name}}
+
+-- pretty.vie --
+{{ name }}
+

@@ -20,7 +20,7 @@ func Execute(ctx context.Context, use string, version string) error {
 
 	root.AddCommand(
 		newCmdFormat(),
-		newCmdShow(),
+		newCmdContext(),
 		newCmdRender(),
 		newCmdNew(),
 	)

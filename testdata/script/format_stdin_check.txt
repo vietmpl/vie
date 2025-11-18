@@ -1,0 +1,22 @@
+# Non-pretty input with --check produce no output and exits with error
+
+stdin non-pretty.vie
+! exec vie format --stdin --check
+! stderr .
+! stdout .
+
+
+# Pretty input with --check produce no output and succeeds
+
+stdin pretty.vie
+exec vie format --stdin --check
+! stderr .
+! stdout .
+
+
+-- non-pretty.vie --
+{{name}}
+
+-- pretty.vie --
+{{ name }}
+

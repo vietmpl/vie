@@ -1,0 +1,20 @@
+# Non-pretty file with --check is reported and exits with error
+
+! exec vie format --check non-pretty.vie
+! stderr .
+stdout ^non-pretty.vie$
+
+
+# Pretty file with --check produce no output and succeeds
+
+exec vie format --check pretty.vie
+! stderr .
+! stdout .
+
+
+-- non-pretty.vie --
+{{name}}
+
+-- pretty.vie --
+{{ name }}
+

@@ -1,0 +1,8 @@
+# Get context from file
+
+exec vie context input.txt.vie
+! stderr .
+stdout '^name: string$'
+
+-- input.txt.vie --
+{{ name }}
