@@ -9,17 +9,11 @@ import (
 	"github.com/vietmpl/vie/parser"
 )
 
-func printDiagnostics(diagnostics []analysis.Diagnostic) {
-	for _, d := range diagnostics {
-		pos := d.Pos()
-		fmt.Printf("%s:%d:%d: %s\n", pos.Path, pos.Line, pos.Character, d.String())
-	}
-}
-
-func contextCmd() *cobra.Command {
+func newCmdShow() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "context <path>",
-		Args: cobra.ExactArgs(1),
+		Use:   "show TEMPLATE",
+		Short: "Show information about template",
+		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]
 
@@ -48,4 +42,11 @@ func contextCmd() *cobra.Command {
 		},
 	}
 	return cmd
+}
+
+func printDiagnostics(diagnostics []analysis.Diagnostic) {
+	for _, d := range diagnostics {
+		pos := d.Pos()
+		fmt.Printf("%s:%d:%d: %s\n", pos.Path, pos.Line, pos.Character, d.String())
+	}
 }

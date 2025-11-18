@@ -10,10 +10,12 @@ import (
 	"github.com/vietmpl/vie/internal/template"
 )
 
-func newCmd() *cobra.Command {
+func newCmdNew() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "new <template-name> <dest>",
-		Args: cobra.MinimumNArgs(2),
+		Use:     "new TEMPLATE DEST [VAR=VALUE...] [VAR...]",
+		Short:   "Render a template in the target directory",
+		Example: "vie new component src/ name=Button with-test",
+		Args:    cobra.MinimumNArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			tmplName := args[0]
 			dest := args[1]
@@ -24,7 +26,8 @@ func newCmd() *cobra.Command {
 				return err
 			}
 
-			context, err := parseContext(args[2:])
+			contextArgs := args[2:]
+			context, err := parseContext(contextArgs)
 			if err != nil {
 				return err
 			}

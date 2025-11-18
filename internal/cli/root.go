@@ -19,10 +19,10 @@ func Execute(ctx context.Context, use string, version string) error {
 	}
 
 	root.AddCommand(
-		formatCmd(),
-		contextCmd(),
-		renderCmd(),
-		newCmd(),
+		newCmdFormat(),
+		newCmdShow(),
+		newCmdRender(),
+		newCmdNew(),
 	)
 
 	root.SetVersionTemplate("{{.Version}}\n")

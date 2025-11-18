@@ -12,31 +12,9 @@ import (
 	"github.com/vietmpl/vie/value"
 )
 
-func parseContext(args []string) (map[string]value.Value, error) {
-	context := make(map[string]value.Value)
-	for _, a := range args {
-		if strings.Contains(a, "=") {
-			kv := strings.SplitN(a, "=", 2)
-			context[kv[0]] = value.String(kv[1])
-		} else {
-			context[a] = value.Bool(true)
-		}
-	}
-	return context, nil
-}
-
-// checkForUnusedVars checks for variables in the context but not in template.
-func checkForUnusedVars(typemap map[string]value.Type, context map[string]value.Value) {
-	for varname := range context {
-		if _, ok := typemap[varname]; !ok {
-			fmt.Printf("warning: %s provided but not used\n", varname)
-		}
-	}
-}
-
-func renderCmd() *cobra.Command {
+func newCmdRender() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "render <path>",
+		Use:  "render PATH",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]
@@ -79,4 +57,26 @@ func renderCmd() *cobra.Command {
 		},
 	}
 	return cmd
+}
+
+func parseContext(args []string) (map[string]value.Value, error) {
+	context := make(map[string]value.Value)
+	for _, a := range args {
+		if strings.Contains(a, "=") {
+			kv := strings.SplitN(a, "=", 2)
+			context[kv[0]] = value.String(kv[1])
+		} else {
+			context[a] = value.Bool(true)
+		}
+	}
+	return context, nil
+}
+
+// checkForUnusedVars checks for variables in the context but not in template.
+func checkForUnusedVars(typemap map[string]value.Type, context map[string]value.Value) {
+	for varname := range context {
+		if _, ok := typemap[varname]; !ok {
+			fmt.Printf("warning: %s provided but not used\n", varname)
+		}
+	}
 }

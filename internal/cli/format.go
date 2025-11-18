@@ -13,12 +13,12 @@ import (
 	"github.com/vietmpl/vie/parser"
 )
 
-func formatCmd() *cobra.Command {
+func newCmdFormat() *cobra.Command {
 	var check bool
 	var stdin bool
 
 	cmd := &cobra.Command{
-		Use:  "format <path>",
+		Use:  "format PATH",
 		Args: cobra.MaximumNArgs(1), // 0 if --stdin, 1 otherwise
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if stdin {
