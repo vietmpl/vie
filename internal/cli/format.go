@@ -51,37 +51,34 @@ func newCmdFormat() *cobra.Command {
 				return err
 			}
 
-			if !info.IsDir() {
-				changed, err := formatFile(path, check)
-				if err != nil {
-					return err
-				}
-				if check && changed {
-					os.Exit(1)
-				}
-			}
-
 			changed := false
-			// TODO(skewb1k): consider parallelizing formatting for multiple files.
-			// Might not be worth the added complexity; using a buffer pool
-			// could be more appealing in this case.
-			if err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
-				if err != nil {
-					return err
-				}
-				if d.IsDir() || filepath.Ext(d.Name()) != ".vie" {
+			if info.IsDir() {
+				// TODO(skewb1k): consider parallelizing formatting for multiple files.
+				// Might not be worth the added complexity; using a buffer pool
+				// could be more appealing in this case.
+				if err := filepath.WalkDir(path, func(path string, d fs.DirEntry, err error) error {
+					if err != nil {
+						return err
+					}
+					if d.IsDir() || filepath.Ext(d.Name()) != ".vie" {
+						return nil
+					}
+					c, err := formatFile(path, check)
+					if err != nil {
+						return err
+					}
+					changed = changed || c
 					return nil
+				}); err != nil {
+					return err
 				}
-				c, err := formatFile(path, check)
+			} else {
+				changed, err = formatFile(path, check)
 				if err != nil {
 					return err
 				}
-				changed = changed || c
-				return nil
-			}); err != nil {
-				return err
 			}
-			if changed {
+			if check && changed {
 				os.Exit(1)
 			}
 			return nil

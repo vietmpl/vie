@@ -1,0 +1,26 @@
+# Non-pretty directory with --check is reported and exits with error
+
+! exec vie format --check non-pretty
+! stderr .
+stdout ^non-pretty[/\\]a.vie$
+
+
+# Pretty directory with --check produce no output and succeeds
+
+exec vie format --check pretty
+! stderr .
+! stdout .
+
+
+-- non-pretty/a.vie --
+{{name}}
+
+-- non-pretty/b.txt --
+keep me
+
+-- pretty/a.vie --
+{{ name }}
+
+-- pretty/b.txt --
+keep me
+

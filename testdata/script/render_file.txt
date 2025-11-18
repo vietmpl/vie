@@ -1,0 +1,12 @@
+# Renders file to stdout
+
+exec vie render input.txt.vie name=test
+! stderr .
+cmp stdout want.txt
+
+-- input.txt.vie --
+{{ name }}
+
+-- want.txt --
+test
+

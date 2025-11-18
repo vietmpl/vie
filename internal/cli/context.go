@@ -9,11 +9,10 @@ import (
 	"github.com/vietmpl/vie/parser"
 )
 
-func newCmdShow() *cobra.Command {
+func newCmdContext() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "show TEMPLATE",
-		Short: "Show information about template",
-		Args:  cobra.ExactArgs(1),
+		Use:  "context PATH",
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]
 

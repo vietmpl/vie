@@ -14,7 +14,7 @@ import (
 
 func newCmdRender() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:  "render PATH",
+		Use:  "render PATH [VAR=VALUE...] [VAR...]",
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			path := args[0]

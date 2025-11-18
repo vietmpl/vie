@@ -1,0 +1,21 @@
+# Non-pretty input from stdin is correctly formatted to stdout
+
+stdin non-pretty.vie
+exec vie format --stdin
+! stderr .
+cmp stdout pretty.vie
+
+
+# Pretty input from stdin is correctly formatted to stdout
+
+stdin pretty.vie
+exec vie format --stdin
+! stderr .
+cmp stdout pretty.vie
+
+-- non-pretty.vie --
+{{name}}
+
+-- pretty.vie --
+{{ name }}
+
