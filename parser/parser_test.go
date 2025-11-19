@@ -117,8 +117,30 @@ func TestParseBytes(t *testing.T) {
 				},
 			},
 		},
-		// TODO(skewb1k): would be nice to emit BadExpr in this case.
-		"empty-render": unclosed,
+		"empty-render": {
+			file: &File{
+				Stmts: []Stmt{
+					&Text{
+						Value: "TOP\n",
+					},
+					&RenderStmt{
+						X: &BadExpr{
+							From: Pos{
+								Line:      1,
+								Character: 2,
+							},
+							To: Pos{
+								Line:      1,
+								Character: 2,
+							},
+						},
+					},
+					&Text{
+						Value: "\nBOT\n",
+					},
+				},
+			},
+		},
 		"empty-switch": {
 			file: &File{
 				Stmts: []Stmt{
@@ -189,39 +211,14 @@ func TestParseBytes(t *testing.T) {
 					&Text{
 						Value: "TOP\n",
 					},
-					&SwitchStmt{
-						Value: &BasicLit{
-							ValuePos: Pos{
-								Line:      1,
-								Character: 10,
-							},
-							Kind:  KindString,
-							Value: "\"\"",
+					&BadStmt{
+						From: Pos{
+							Line:      1,
+							Character: 0,
 						},
-						Cases: []CaseClause{
-							{
-								List: []Expr{
-									&BasicLit{
-										ValuePos: Pos{
-											Line:      2,
-											Character: 8,
-										},
-										Kind:  KindString,
-										Value: "''",
-									},
-									&BadExpr{
-										From: Pos{
-											Line:      2,
-											Character: 10,
-										},
-										To: Pos{
-											Line:      2,
-											Character: 14,
-										},
-									},
-								},
-								Body: nil,
-							},
+						To: Pos{
+							Line:      4,
+							Character: 0,
 						},
 					},
 					&Text{
@@ -304,7 +301,7 @@ func TestParseBytes(t *testing.T) {
 									},
 									To: Pos{
 										Line:      2,
-										Character: 17,
+										Character: 13,
 									},
 								},
 								Cons: nil,
@@ -350,11 +347,11 @@ func TestParseBytes(t *testing.T) {
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
-								Character: 5,
+								Character: 3,
 							},
 							To: Pos{
 								Line:      1,
-								Character: 9,
+								Character: 5,
 							},
 						},
 					},
@@ -374,11 +371,11 @@ func TestParseBytes(t *testing.T) {
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
-								Character: 5,
+								Character: 3,
 							},
 							To: Pos{
 								Line:      1,
-								Character: 12,
+								Character: 8,
 							},
 						},
 					},
@@ -505,7 +502,7 @@ func TestParseBytes(t *testing.T) {
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
-								Character: 2,
+								Character: 3,
 							},
 							To: Pos{
 								Line:      1,
@@ -533,7 +530,7 @@ func TestParseBytes(t *testing.T) {
 							},
 							To: Pos{
 								Line:      1,
-								Character: 10,
+								Character: 9,
 							},
 						},
 					},
@@ -559,23 +556,23 @@ func TestParseBytes(t *testing.T) {
 								Name: "@func",
 							},
 							Args: []Expr{
-								&BasicLit{
-									ValuePos: Pos{
-										Line:      1,
-										Character: 9,
-									},
-									Kind:  KindString,
-									Value: "\"\"",
-								},
 								&BadExpr{
 									From: Pos{
 										Line:      1,
-										Character: 11,
+										Character: 9,
 									},
 									To: Pos{
 										Line:      1,
-										Character: 14,
+										Character: 11,
 									},
+								},
+								&BasicLit{
+									ValuePos: Pos{
+										Line:      1,
+										Character: 12,
+									},
+									Kind:  KindString,
+									Value: "\"\"",
 								},
 							},
 						},
@@ -596,11 +593,11 @@ func TestParseBytes(t *testing.T) {
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
-								Character: 2,
+								Character: 3,
 							},
 							To: Pos{
 								Line:      1,
-								Character: 5,
+								Character: 4,
 							},
 						},
 					},
@@ -620,11 +617,11 @@ func TestParseBytes(t *testing.T) {
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
-								Character: 6,
+								Character: 3,
 							},
 							To: Pos{
 								Line:      1,
-								Character: 8,
+								Character: 7,
 							},
 						},
 					},
