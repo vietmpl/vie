@@ -9,7 +9,7 @@ require (
 	github.com/skewb1k/golden v0.0.0-20251112194202-970744124521
 	github.com/spf13/cobra v1.10.1
 	github.com/tree-sitter/go-tree-sitter v0.25.0
-	github.com/vietmpl/tree-sitter-vie v0.2.4-0.20251116163037-c7f4e18a886e
+	github.com/vietmpl/tree-sitter-vie v0.2.4
 )
 
 require (

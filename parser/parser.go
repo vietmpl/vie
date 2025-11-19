@@ -245,17 +245,14 @@ func (p parser) parseStmt() ast.Stmt {
 
 				p.GotoNextSibling() // '{%'
 				p.GotoNextSibling() // 'case'
+				// handle unexpected expression after case
+				// i.e. {% case "" "" %}
+				if p.Node().IsError() {
+					bad = true
+					p.GotoNextSibling() // '<bad-expr>'
+				}
 				caseClause.List = p.parseExprList()
 				p.GotoNextSibling() // '<expr-list>'
-				// handle unexpected expression after the expr-list
-				// i.e. {% case "" "" %}
-				nn := p.Node()
-				if nn.IsError() {
-					caseClause.List = append(caseClause.List, &ast.BadExpr{
-						From: p.posFromTsPoint(nn.StartPosition()),
-						To:   p.posFromTsPoint(nn.EndPosition()),
-					})
-				}
 				p.GotoParent()
 
 				for p.GotoNextSibling() {
@@ -384,10 +381,18 @@ func (p parser) parseExpr() ast.Expr {
 		var pipe ast.PipeExpr
 
 		pipe.Arg = p.parseExpr()
+		p.GotoNextSibling() // <expr>
 
 		p.GotoNextSibling() // '|'
 
-		p.GotoNextSibling()
+		nn := p.Node()
+		if nn.IsError() || nn.IsMissing() {
+			return &ast.BadExpr{
+				From: p.posFromTsPoint(n.StartPosition()),
+				To:   p.posFromTsPoint(nn.EndPosition()),
+			}
+		}
+
 		pipe.Func = ast.Ident{Name: p.nodeContent(p.Node())}
 
 		return &pipe
