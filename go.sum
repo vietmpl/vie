@@ -60,6 +60,8 @@ github.com/rogpeppe/go-internal v1.14.1/go.mod h1:MaRKkUm5W0goXpeCfT7UZI6fk/L7L7
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/skewb1k/golden v0.0.0-20251112194202-970744124521 h1:JTTvTZWR7uxHEd6ZzWt6dUNTf0qhXn6eNLnn077gypo=
 github.com/skewb1k/golden v0.0.0-20251112194202-970744124521/go.mod h1:0v15Fs5fF+gyiBq5MRlMkt/p0Umd9b3jBTunlFEHN+M=
+github.com/skewb1k/golden v0.0.0-20251120174520-3e848f1c7f9f h1:GOxjhqCe5VnddF/U/xfjBWxsnv6nac26pOSP2yaGY1A=
+github.com/skewb1k/golden v0.0.0-20251120174520-3e848f1c7f9f/go.mod h1:0v15Fs5fF+gyiBq5MRlMkt/p0Umd9b3jBTunlFEHN+M=
 github.com/spf13/cobra v1.10.1 h1:lJeBwCfmrnXthfAupyUTzJ/J4Nc1RsHC/mSRU2dll/s=
 github.com/spf13/cobra v1.10.1/go.mod h1:7SmJGaTHFVBY0jW4NXGluQoLvhqFQM+6XSKD+P4XaB0=
 github.com/spf13/pflag v1.0.9/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=

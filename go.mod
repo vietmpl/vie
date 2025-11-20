@@ -6,7 +6,7 @@ require (
 	github.com/charmbracelet/fang v0.4.4
 	github.com/google/go-cmp v0.7.0
 	github.com/rogpeppe/go-internal v1.14.1
-	github.com/skewb1k/golden v0.0.0-20251112194202-970744124521
+	github.com/skewb1k/golden v0.0.0-20251120174520-3e848f1c7f9f
 	github.com/spf13/cobra v1.10.1
 	github.com/tree-sitter/go-tree-sitter v0.25.0
 	github.com/vietmpl/tree-sitter-vie v0.2.4
