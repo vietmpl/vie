@@ -23,6 +23,7 @@ func Execute(ctx context.Context, use string, version string) error {
 		newCmdContext(),
 		newCmdRender(),
 		newCmdNew(),
+		newCmdLSP(),
 	)
 
 	root.SetVersionTemplate("{{.Version}}\n")
