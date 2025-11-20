@@ -21,13 +21,13 @@ func newCmdContext() *cobra.Command {
 				return err
 			}
 
-			f, err := parser.ParseBytes(src, path)
+			f, err := parser.ParseBytes(src)
 			if err != nil {
 				return err
 			}
 
 			analyzer := analysis.NewAnalyzer()
-			analyzer.File(f)
+			analyzer.File(f, path)
 			tm, diagnostics := analyzer.Results()
 			if diagnostics != nil {
 				printDiagnostics(diagnostics)
@@ -46,6 +46,6 @@ func newCmdContext() *cobra.Command {
 func printDiagnostics(diagnostics []analysis.Diagnostic) {
 	for _, d := range diagnostics {
 		pos := d.Pos()
-		fmt.Printf("%s:%d:%d: %s\n", pos.Path, pos.Line, pos.Character, d.String())
+		fmt.Printf("%s:%d:%d: %s\n", d.Path(), pos.Line, pos.Character, d.String())
 	}
 }

@@ -24,7 +24,7 @@ func newCmdRender() *cobra.Command {
 				return err
 			}
 
-			f, err := parser.ParseBytes(src, path)
+			f, err := parser.ParseBytes(src)
 			if err != nil {
 				return err
 			}
@@ -35,7 +35,7 @@ func newCmdRender() *cobra.Command {
 			}
 
 			analyzer := analysis.NewAnalyzer()
-			analyzer.File(f)
+			analyzer.File(f, path)
 			typemap, diagnostics := analyzer.Results()
 			if len(diagnostics) > 0 {
 				printDiagnostics(diagnostics)

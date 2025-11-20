@@ -13,13 +13,12 @@ import (
 type parser struct {
 	*ts.TreeCursor
 
-	src  []byte
-	path string
+	src []byte
 }
 
 var language = ts.NewLanguage(tree_sitter_vie.Language())
 
-func ParseBytes(src []byte, path string) (*ast.File, error) {
+func ParseBytes(src []byte) (*ast.File, error) {
 	tsParser := ts.NewParser()
 	_ = tsParser.SetLanguage(language)
 	defer tsParser.Close()
@@ -33,7 +32,6 @@ func ParseBytes(src []byte, path string) (*ast.File, error) {
 	p := parser{
 		TreeCursor: cursor,
 		src:        src,
-		path:       path,
 	}
 
 	var f ast.File
@@ -443,7 +441,6 @@ func (p parser) nodeContent(n *ts.Node) string {
 
 func (p parser) posFromTsPoint(point ts.Point) ast.Pos {
 	return ast.Pos{
-		Path:      p.path,
 		Line:      point.Row,
 		Character: point.Column,
 	}

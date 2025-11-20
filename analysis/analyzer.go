@@ -31,9 +31,16 @@ func (a *Analyzer) Results() (map[string]value.Type, []Diagnostic) {
 }
 
 // File analyzes a single file and records usages/diagnostics.
-// Safe for concurrent calls with other AnalyzeFile or Finalize calls (with proper locking).
-func (a *Analyzer) File(file *ast.File) {
-	a.checkStmts(file.Stmts)
+// TODO(skewb1k): support context.
+func (a *Analyzer) File(file *ast.File, path string) {
+	c := internalContext{
+		path: path,
+	}
+	a.checkStmts(c, file.Stmts)
+}
+
+type internalContext struct {
+	path string
 }
 
 // processUsages finalizes type inference for all recorded variable usages.
@@ -67,6 +74,7 @@ func (a *Analyzer) processUsages() map[string]value.Type {
 					WantType: u.Type,
 					GotType:  maxType,
 					Pos_:     u.Pos,
+					Path_:    u.Path,
 				})
 			}
 		}
@@ -74,18 +82,18 @@ func (a *Analyzer) processUsages() map[string]value.Type {
 	return types
 }
 
-func (a *Analyzer) checkStmts(stmts []ast.Stmt) {
+func (a *Analyzer) checkStmts(c internalContext, stmts []ast.Stmt) {
 	for _, s := range stmts {
-		a.checkStmt(s)
+		a.checkStmt(c, s)
 	}
 }
 
-func (a *Analyzer) checkStmt(stmt ast.Stmt) {
+func (a *Analyzer) checkStmt(c internalContext, stmt ast.Stmt) {
 	switch s := stmt.(type) {
 	case *ast.Text:
 		// Skip
 	case *ast.RenderStmt:
-		x := a.checkExpr(s.X)
+		x := a.checkExpr(c, s.X)
 		switch xx := x.(type) {
 		case nil:
 			return
@@ -95,6 +103,7 @@ func (a *Analyzer) checkStmt(stmt ast.Stmt) {
 					WantType: value.TypeString,
 					GotType:  xx,
 					Pos_:     s.X.Pos(),
+					Path_:    c.path,
 				})
 			}
 		case TypeVar:
@@ -102,11 +111,12 @@ func (a *Analyzer) checkStmt(stmt ast.Stmt) {
 				Type: value.TypeString,
 				Kind: UsageKindRender,
 				Pos:  s.X.Pos(),
+				Path: c.path,
 			})
 		}
 
 	case *ast.IfStmt:
-		cond := a.checkExpr(s.Cond)
+		cond := a.checkExpr(c, s.Cond)
 		switch condx := cond.(type) {
 		case nil:
 			return
@@ -116,6 +126,7 @@ func (a *Analyzer) checkStmt(stmt ast.Stmt) {
 					WantType: value.TypeBool,
 					GotType:  condx,
 					Pos_:     s.Cond.Pos(),
+					Path_:    c.path,
 				})
 			}
 		case TypeVar:
@@ -123,11 +134,12 @@ func (a *Analyzer) checkStmt(stmt ast.Stmt) {
 				Type: value.TypeBool,
 				Kind: UsageKindIf,
 				Pos:  s.Cond.Pos(),
+				Path: c.path,
 			})
 		}
-		a.checkStmts(s.Cons)
+		a.checkStmts(c, s.Cons)
 		for _, elseIfClause := range s.ElseIfs {
-			elseIfCond := a.checkExpr(elseIfClause.Cond)
+			elseIfCond := a.checkExpr(c, elseIfClause.Cond)
 			switch elseIfCondx := elseIfCond.(type) {
 			case nil:
 				return
@@ -137,6 +149,7 @@ func (a *Analyzer) checkStmt(stmt ast.Stmt) {
 						WantType: value.TypeBool,
 						GotType:  elseIfCondx,
 						Pos_:     elseIfClause.Cond.Pos(),
+						Path_:    c.path,
 					})
 				}
 			case TypeVar:
@@ -144,12 +157,13 @@ func (a *Analyzer) checkStmt(stmt ast.Stmt) {
 					Type: value.TypeBool,
 					Kind: UsageKindIf,
 					Pos:  elseIfClause.Cond.Pos(),
+					Path: c.path,
 				})
 			}
-			a.checkStmts(elseIfClause.Cons)
+			a.checkStmts(c, elseIfClause.Cons)
 		}
 		if s.Else != nil {
-			a.checkStmts(s.Else.Cons)
+			a.checkStmts(c, s.Else.Cons)
 		}
 
 	// case *ast.SwitchStmt:
@@ -165,7 +179,7 @@ func (a *Analyzer) checkStmt(stmt ast.Stmt) {
 // later). A nil result indicates the expression could not be typed, in
 // which case callers should skip further analysis.
 // TODO(skewb1k): avoid using any to represent `[value.Type] | [TypeVar]`.
-func (a *Analyzer) checkExpr(expr ast.Expr) any {
+func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 	switch e := expr.(type) {
 	case *ast.BasicLit:
 		switch e.Kind {
@@ -181,7 +195,7 @@ func (a *Analyzer) checkExpr(expr ast.Expr) any {
 		return TypeVar(e.Name)
 
 	case *ast.UnaryExpr:
-		x := a.checkExpr(e.X)
+		x := a.checkExpr(c, e.X)
 		if x == nil {
 			return nil
 		}
@@ -190,14 +204,15 @@ func (a *Analyzer) checkExpr(expr ast.Expr) any {
 			Type: value.TypeBool,
 			Kind: UsageKindUnOp,
 			Pos:  e.X.Pos(),
+			Path: c.path,
 		})
 		return value.TypeBool
 
 	case *ast.BinaryExpr:
 		switch e.Op {
 		case ast.BinOpKindConcat:
-			x := a.checkExpr(e.X)
-			y := a.checkExpr(e.Y)
+			x := a.checkExpr(c, e.X)
+			y := a.checkExpr(c, e.Y)
 			if x == nil || y == nil {
 				return nil
 			}
@@ -206,11 +221,13 @@ func (a *Analyzer) checkExpr(expr ast.Expr) any {
 				Type: value.TypeString,
 				Kind: UsageKindBinOp,
 				Pos:  e.X.Pos(),
+				Path: c.path,
 			})
 			a.expectType(y, Usage{
 				Type: value.TypeString,
 				Kind: UsageKindBinOp,
 				Pos:  e.Y.Pos(),
+				Path: c.path,
 			})
 			return value.TypeString
 
@@ -220,8 +237,8 @@ func (a *Analyzer) checkExpr(expr ast.Expr) any {
 			ast.BinOpKindIs,
 			ast.BinOpKindIsNot:
 
-			x := a.checkExpr(e.X)
-			y := a.checkExpr(e.Y)
+			x := a.checkExpr(c, e.X)
+			y := a.checkExpr(c, e.Y)
 			if x == nil || y == nil {
 				return nil
 			}
@@ -234,9 +251,10 @@ func (a *Analyzer) checkExpr(expr ast.Expr) any {
 					// catch `false is "str"`
 					if xx != yy {
 						a.addDiagnostic(InvalidOperation{
-							X:    xx,
-							Y:    yy,
-							Pos_: e.Pos(),
+							X:     xx,
+							Y:     yy,
+							Pos_:  e.Pos(),
+							Path_: c.path,
 						})
 					}
 				// <lit> is <var>
@@ -245,6 +263,7 @@ func (a *Analyzer) checkExpr(expr ast.Expr) any {
 						Type: xx,
 						Kind: UsageKindBinOp,
 						Pos:  e.Pos(),
+						Path: c.path,
 					})
 				}
 			case TypeVar:
@@ -255,13 +274,15 @@ func (a *Analyzer) checkExpr(expr ast.Expr) any {
 						Type: yy,
 						Kind: UsageKindBinOp,
 						Pos:  e.Pos(),
+						Path: c.path,
 					})
 				// <var> is <var>
 				case TypeVar:
 					a.addDiagnostic(CrossVarTyping{
-						X:    xx,
-						Y:    yy,
-						Pos_: e.Pos(),
+						X:     xx,
+						Y:     yy,
+						Pos_:  e.Pos(),
+						Path_: c.path,
 					})
 				}
 			}
@@ -276,8 +297,8 @@ func (a *Analyzer) checkExpr(expr ast.Expr) any {
 			ast.BinOpKindAnd,
 			ast.BinOpKindOr:
 
-			x := a.checkExpr(e.X)
-			y := a.checkExpr(e.Y)
+			x := a.checkExpr(c, e.X)
+			y := a.checkExpr(c, e.Y)
 			if x == nil || y == nil {
 				return nil
 			}
@@ -286,11 +307,13 @@ func (a *Analyzer) checkExpr(expr ast.Expr) any {
 				Type: value.TypeBool,
 				Kind: UsageKindBinOp,
 				Pos:  e.X.Pos(),
+				Path: c.path,
 			})
 			a.expectType(y, Usage{
 				Type: value.TypeBool,
 				Kind: UsageKindBinOp,
 				Pos:  e.Y.Pos(),
+				Path: c.path,
 			})
 			return value.TypeBool
 
@@ -299,13 +322,13 @@ func (a *Analyzer) checkExpr(expr ast.Expr) any {
 		}
 
 	case *ast.ParenExpr:
-		return a.checkExpr(e.X)
+		return a.checkExpr(c, e.X)
 
 	case *ast.CallExpr:
-		return a.checkFunc(e.Func, e.Args)
+		return a.checkFunc(c, e.Func, e.Args)
 
 	case *ast.PipeExpr:
-		return a.checkFunc(e.Func, []ast.Expr{e.Arg})
+		return a.checkFunc(c, e.Func, []ast.Expr{e.Arg})
 
 	default:
 		panic(fmt.Sprintf("analyzer: unexpected expr type %T", expr))
@@ -316,13 +339,14 @@ func (a *Analyzer) checkExpr(expr ast.Expr) any {
 // ensures argument count and types match the builtin definition, producing
 // diagnostics on mismatch. Returns the function’s declared return type if
 // found, or nil on failure.
-func (a *Analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
+func (a *Analyzer) checkFunc(c internalContext, ident ast.Ident, exprs []ast.Expr) any {
 	fn, err := builtin.LookupFunction(ident)
 	if err != nil {
 		a.addDiagnostic(BuiltinNotFound{
-			Name: ident.Name,
-			Msg:  err.Error(),
-			Pos_: ident.Pos(),
+			Name:  ident.Name,
+			Msg:   err.Error(),
+			Pos_:  ident.Pos(),
+			Path_: c.path,
 		})
 		return nil
 	}
@@ -333,7 +357,8 @@ func (a *Analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
 			Got:      len(exprs),
 			Want:     len(fn.ArgTypes),
 			// TODO(skewb1k): use proper arg pos.
-			Pos_: ident.Pos(),
+			Pos_:  ident.Pos(),
+			Path_: c.path,
 		})
 		return fn.ReturnType
 	}
@@ -347,7 +372,7 @@ func (a *Analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
 	}
 	args := make([]typedArg, 0, len(exprs))
 	for _, arg := range exprs {
-		x := a.checkExpr(arg)
+		x := a.checkExpr(c, arg)
 		if x == nil {
 			return nil
 		}
@@ -362,6 +387,7 @@ func (a *Analyzer) checkFunc(ident ast.Ident, exprs []ast.Expr) any {
 			Type: fn.ArgTypes[i],
 			Kind: UsageKindCall,
 			Pos:  arg.expr.Pos(),
+			Path: c.path,
 		})
 	}
 	return fn.ReturnType
@@ -379,6 +405,7 @@ func (a *Analyzer) expectType(t any, u Usage) {
 				WantType: u.Type,
 				GotType:  xx,
 				Pos_:     u.Pos,
+				Path_:    u.Path,
 			})
 		}
 	case TypeVar:

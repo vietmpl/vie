@@ -37,7 +37,7 @@ func parseDir(parent, dirName string) (*Dir, error) {
 	for _, entry := range entries {
 		name := entry.Name()
 		// TODO(skewb1k): allow only specific subset of syntax in name.
-		nameAST, err := parser.ParseBytes([]byte(name), name)
+		nameAST, err := parser.ParseBytes([]byte(name))
 		if err != nil {
 			return nil, err
 		}
@@ -62,7 +62,7 @@ func parseDir(parent, dirName string) (*Dir, error) {
 			f.Content = content
 			// Parse file content if its Vie file
 			if filepath.Ext(name) == ".vie" {
-				contentAST, err := parser.ParseBytes(content, path)
+				contentAST, err := parser.ParseBytes(content)
 				if err != nil {
 					return nil, err
 				}

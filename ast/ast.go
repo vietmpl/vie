@@ -1,9 +1,6 @@
 package ast
 
 type Pos struct {
-	// TODO(skewb1k): storing the path in every Pos is wasteful.
-	// Move path resolution to a higher layer to avoid per-position duplication.
-	Path      string
 	Line      uint // line position in a document (zero-based)
 	Character uint // character offset on a line in a document (zero-based)
 }

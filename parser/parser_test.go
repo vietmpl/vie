@@ -644,7 +644,7 @@ func TestParseBytes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			f, err := parser.ParseBytes(input, "")
+			f, err := parser.ParseBytes(input)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -684,7 +684,7 @@ func TestParseBytesFuzzTruncate(t *testing.T) {
 		t.Run("start_"+strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 			fragment := src[i:]
-			_, err := parser.ParseBytes(fragment, "")
+			_, err := parser.ParseBytes(fragment)
 			if err != nil {
 				t.Fatalf("unexpected error at length %d: %v", i, err)
 			}
@@ -696,7 +696,7 @@ func TestParseBytesFuzzTruncate(t *testing.T) {
 		t.Run("end_"+strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 			fragment := src[:i]
-			_, err := parser.ParseBytes(fragment, "")
+			_, err := parser.ParseBytes(fragment)
 			if err != nil {
 				t.Fatalf("unexpected error at length %d: %v", i, err)
 			}
@@ -709,7 +709,7 @@ func TestParseBytesFuzzTruncate(t *testing.T) {
 			t.Parallel()
 			fragment := append([]byte(nil), src[:i]...)
 			fragment = append(fragment, src[i+1:]...)
-			_, err := parser.ParseBytes(fragment, "")
+			_, err := parser.ParseBytes(fragment)
 			if err != nil {
 				t.Fatalf("unexpected error after removing index %d: %v", i, err)
 			}
