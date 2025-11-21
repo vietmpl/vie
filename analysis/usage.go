@@ -20,4 +20,5 @@ type Usage struct {
 	Type value.Type
 	Kind usageKind
 	Pos  ast.Pos
+	Path string
 }
