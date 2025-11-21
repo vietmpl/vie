@@ -69,7 +69,6 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"concatenate-bool-str": {
-			Typemap: map[string]Type{},
 			Diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeString,
@@ -82,7 +81,6 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"non-bool-if": {
-			Typemap: map[string]Type{},
 			Diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeBool,
@@ -95,7 +93,6 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"non-bool-not": {
-			Typemap: map[string]Type{},
 			Diagnostics: []Diagnostic{
 				WrongUsage{
 					WantType: TypeBool,
@@ -108,7 +105,6 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"cross-var": {
-			Typemap: map[string]Type{},
 			Diagnostics: []Diagnostic{
 				CrossVarTyping{
 					X: TypeVar("a"),
@@ -169,7 +165,6 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"incorrect-arg-count": {
-			Typemap: map[string]Type{},
 			Diagnostics: []Diagnostic{
 				IncorrectArgCount{
 					FuncName: "@upper",
@@ -183,7 +178,6 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"incorrect-arg-count-with-var": {
-			Typemap: map[string]Type{},
 			Diagnostics: []Diagnostic{
 				IncorrectArgCount{
 					FuncName: "@upper",
@@ -197,7 +191,6 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"func-not-found": {
-			Typemap: map[string]Type{},
 			Diagnostics: []Diagnostic{
 				BuiltinNotFound{
 					Name: "@undefined_func",
@@ -210,7 +203,6 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"call-undefined": {
-			Typemap: map[string]Type{},
 			Diagnostics: []Diagnostic{
 				BuiltinNotFound{
 					Name: "@undefined_func",
@@ -223,7 +215,6 @@ func TestTypes(t *testing.T) {
 			},
 		},
 		"wrong-use-call-undefined": {
-			Typemap: map[string]Type{},
 			Diagnostics: []Diagnostic{
 				BuiltinNotFound{
 					Name: "@undefined_func",
