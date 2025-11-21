@@ -22,7 +22,8 @@ func TestParseBytes(t *testing.T) {
 	}
 
 	type testCase struct {
-		file *File
+		file   *File
+		errors error
 	}
 
 	unclosed := testCase{
@@ -41,6 +42,15 @@ func TestParseBytes(t *testing.T) {
 						Character: 0,
 					},
 				},
+			},
+		},
+		errors: parser.ErrorList{
+			{
+				Pos: Pos{
+					Line:      1,
+					Character: 0,
+				},
+				Msg: "invalid statement",
 			},
 		},
 	}
@@ -78,6 +88,15 @@ func TestParseBytes(t *testing.T) {
 					},
 				},
 			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 0,
+					},
+					Msg: `expected {% end %}, found EOF`,
+				},
+			},
 		},
 		"unclosed-switch": {
 			file: &File{
@@ -91,10 +110,19 @@ func TestParseBytes(t *testing.T) {
 							Character: 0,
 						},
 						To: Pos{
-							Line:      2,
+							Line:      3,
 							Character: 0,
 						},
 					},
+				},
+			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 0,
+					},
+					Msg: `expected {% end %}, found EOF`,
 				},
 			},
 		},
@@ -110,10 +138,19 @@ func TestParseBytes(t *testing.T) {
 							Character: 0,
 						},
 						To: Pos{
-							Line:      2,
+							Line:      4,
 							Character: 0,
 						},
 					},
+				},
+			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 0,
+					},
+					Msg: `expected {% end %}, found EOF`,
 				},
 			},
 		},
@@ -140,6 +177,15 @@ func TestParseBytes(t *testing.T) {
 					},
 				},
 			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 2,
+					},
+					Msg: "expected expression, found ",
+				},
+			},
 		},
 		"empty-switch": {
 			file: &File{
@@ -163,6 +209,15 @@ func TestParseBytes(t *testing.T) {
 					&Text{
 						Value: "BOT\n",
 					},
+				},
+			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 9,
+					},
+					Msg: "expected expression, found ",
 				},
 			},
 		},
@@ -204,6 +259,15 @@ func TestParseBytes(t *testing.T) {
 					},
 				},
 			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      2,
+						Character: 7,
+					},
+					Msg: "expected expression, found ",
+				},
+			},
 		},
 		"extra-case": {
 			file: &File{
@@ -211,19 +275,45 @@ func TestParseBytes(t *testing.T) {
 					&Text{
 						Value: "TOP\n",
 					},
-					&BadStmt{
-						From: Pos{
-							Line:      1,
-							Character: 0,
+					&SwitchStmt{
+						Value: &BasicLit{
+							ValuePos: Pos{
+								Line:      1,
+								Character: 10,
+							},
+							Kind:  KindString,
+							Value: "\"\"",
 						},
-						To: Pos{
-							Line:      4,
-							Character: 0,
+						Cases: []CaseClause{
+							{
+								List: []Expr{
+									&BadExpr{
+										From: Pos{
+											Line:      2,
+											Character: 8,
+										},
+										To: Pos{
+											Line:      2,
+											Character: 10,
+										},
+									},
+								},
+								Body: nil,
+							},
 						},
 					},
 					&Text{
 						Value: "BOT\n",
 					},
+				},
+			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      2,
+						Character: 8,
+					},
+					Msg: "expected expression, found ''",
 				},
 			},
 		},
@@ -253,6 +343,16 @@ func TestParseBytes(t *testing.T) {
 					},
 				},
 			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 5,
+					},
+					// TODO(skewb1k): emit "missing condition in if statement"
+					Msg: "expected expression, found ",
+				},
+			},
 		},
 		"empty-else-if": {
 			file: &File{
@@ -273,6 +373,15 @@ func TestParseBytes(t *testing.T) {
 					&Text{
 						Value: "BOT\n",
 					},
+				},
+			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 0,
+					},
+					Msg: "missing condition in else if statement",
 				},
 			},
 		},
@@ -314,6 +423,15 @@ func TestParseBytes(t *testing.T) {
 					},
 				},
 			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      2,
+						Character: 11,
+					},
+					Msg: `expected expression, found ""`,
+				},
+			},
 		},
 		"extra-else": {
 			file: &File{
@@ -334,6 +452,15 @@ func TestParseBytes(t *testing.T) {
 					&Text{
 						Value: "BOT\n",
 					},
+				},
+			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 0,
+					},
+					Msg: `unexpected "extra" after else`,
 				},
 			},
 		},
@@ -360,6 +487,15 @@ func TestParseBytes(t *testing.T) {
 					},
 				},
 			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 3,
+					},
+					Msg: `expected expression, found ""`,
+				},
+			},
 		},
 		"extra-render-2": {
 			file: &File{
@@ -375,13 +511,22 @@ func TestParseBytes(t *testing.T) {
 							},
 							To: Pos{
 								Line:      1,
-								Character: 8,
+								Character: 11,
 							},
 						},
 					},
 					&Text{
 						Value: "\nBOT\n",
 					},
+				},
+			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 3,
+					},
+					Msg: `expected expression, found "" extra`,
 				},
 			},
 		},
@@ -406,6 +551,15 @@ func TestParseBytes(t *testing.T) {
 					},
 				},
 			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 0,
+					},
+					Msg: `unexpected {% end %}`,
+				},
+			},
 		},
 		"trailing-case-tag": {
 			file: &File{
@@ -426,6 +580,15 @@ func TestParseBytes(t *testing.T) {
 					&Text{
 						Value: "BOT\n",
 					},
+				},
+			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 0,
+					},
+					Msg: `unexpected {% case "" %}`,
 				},
 			},
 		},
@@ -469,6 +632,15 @@ func TestParseBytes(t *testing.T) {
 					},
 				},
 			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 0,
+					},
+					Msg: "invalid statement",
+				},
+			},
 		},
 		"multiline-comm": {
 			file: &File{
@@ -489,6 +661,15 @@ func TestParseBytes(t *testing.T) {
 					&Text{
 						Value: "\nBOT\n",
 					},
+				},
+			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 0,
+					},
+					Msg: "comments cannot contain line breaks",
 				},
 			},
 		},
@@ -515,6 +696,15 @@ func TestParseBytes(t *testing.T) {
 					},
 				},
 			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 3,
+					},
+					Msg: "expected expression, found @",
+				},
+			},
 		},
 		"unclosed-call": {
 			file: &File{
@@ -526,7 +716,7 @@ func TestParseBytes(t *testing.T) {
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
-								Character: 8,
+								Character: 3,
 							},
 							To: Pos{
 								Line:      1,
@@ -537,6 +727,15 @@ func TestParseBytes(t *testing.T) {
 					&Text{
 						Value: "\nBOT\n",
 					},
+				},
+			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 8,
+					},
+					Msg: `unexpected ( in render statement`,
 				},
 			},
 		},
@@ -566,13 +765,12 @@ func TestParseBytes(t *testing.T) {
 										Character: 11,
 									},
 								},
-								&BasicLit{
-									ValuePos: Pos{
+								&Ident{
+									NamePos: Pos{
 										Line:      1,
 										Character: 12,
 									},
-									Kind:  KindString,
-									Value: "\"\"",
+									Name: "extra",
 								},
 							},
 						},
@@ -580,6 +778,16 @@ func TestParseBytes(t *testing.T) {
 					&Text{
 						Value: "\nBOT\n",
 					},
+				},
+			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 9,
+					},
+					// TODO(skewb1k): improve message.
+					Msg: `expected expression, found ""`,
 				},
 			},
 		},
@@ -606,6 +814,15 @@ func TestParseBytes(t *testing.T) {
 					},
 				},
 			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 3,
+					},
+					Msg: "expected expression, found |",
+				},
+			},
 		},
 		"empty-pipe-2": {
 			file: &File{
@@ -630,6 +847,15 @@ func TestParseBytes(t *testing.T) {
 					},
 				},
 			},
+			errors: parser.ErrorList{
+				{
+					Pos: Pos{
+						Line:      1,
+						Character: 3,
+					},
+					Msg: `expected expression, found "" |`,
+				},
+			},
 		},
 	}
 
@@ -645,9 +871,11 @@ func TestParseBytes(t *testing.T) {
 				t.Fatal(err)
 			}
 			f, err := parser.ParseBytes(input)
-			if err != nil {
-				t.Fatal(err)
+
+			if diff := cmp.Diff(cases[name].errors, err); diff != "" {
+				t.Errorf("(-want +got):\n%s", diff)
 			}
+
 			if diff := cmp.Diff(cases[name].file, f); diff != "" {
 				t.Errorf("(-want +got):\n%s", diff)
 			}
@@ -684,10 +912,7 @@ func TestParseBytesFuzzTruncate(t *testing.T) {
 		t.Run("start_"+strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 			fragment := src[i:]
-			_, err := parser.ParseBytes(fragment)
-			if err != nil {
-				t.Fatalf("unexpected error at length %d: %v", i, err)
-			}
+			_, _ = parser.ParseBytes(fragment)
 		})
 	}
 
@@ -696,10 +921,7 @@ func TestParseBytesFuzzTruncate(t *testing.T) {
 		t.Run("end_"+strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 			fragment := src[:i]
-			_, err := parser.ParseBytes(fragment)
-			if err != nil {
-				t.Fatalf("unexpected error at length %d: %v", i, err)
-			}
+			_, _ = parser.ParseBytes(fragment)
 		})
 	}
 
@@ -709,10 +931,7 @@ func TestParseBytesFuzzTruncate(t *testing.T) {
 			t.Parallel()
 			fragment := append([]byte(nil), src[:i]...)
 			fragment = append(fragment, src[i+1:]...)
-			_, err := parser.ParseBytes(fragment)
-			if err != nil {
-				t.Fatalf("unexpected error after removing index %d: %v", i, err)
-			}
+			_, _ = parser.ParseBytes(fragment)
 		})
 	}
 }
