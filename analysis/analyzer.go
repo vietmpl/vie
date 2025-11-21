@@ -166,7 +166,7 @@ func (a *Analyzer) checkStmt(c internalContext, stmt ast.Stmt) {
 			a.checkStmts(c, s.Else.Cons)
 		}
 
-	// case *ast.SwitchStmt:
+	case *ast.SwitchStmt:
 
 	default:
 		panic(fmt.Sprintf("analyzer: unexpected stmt type %T", stmt))
