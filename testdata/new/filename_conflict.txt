@@ -1,0 +1,12 @@
+# New template filename conflict
+
+! exec vie new template src
+stderr '^error: test.txt conflicts$'
+! stdout .
+
+-- .vie/template/test.txt --
+file1
+
+-- .vie/template/test.txt.vie --
+file2
+

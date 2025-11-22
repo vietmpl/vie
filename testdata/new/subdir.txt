@@ -1,0 +1,13 @@
+# Create new template with subdir
+
+exec vie new template src
+! stderr .
+stdout ^src[/\\]subdir[/\\]file.txt$
+cmp src/subdir/file.txt want/subdir/file.txt
+
+-- .vie/template/subdir/file.txt --
+test
+
+-- want/subdir/file.txt --
+test
+

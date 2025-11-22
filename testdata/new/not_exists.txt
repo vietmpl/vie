@@ -1,0 +1,4 @@
+# Creating not existing template should error
+
+! exec vie new template src
+! stdout .

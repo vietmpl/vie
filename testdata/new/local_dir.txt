@@ -1,12 +1,12 @@
 # Create new template from ./.vie/
 
-exec vie new template src name=test
+exec vie new template src
 ! stderr .
 stdout ^src[/\\]file.txt$
 cmp src/file.txt want/file.txt
 
 -- .vie/template/file.txt.vie --
-{{ name }}
+{{ "test" }}
 
 -- want/file.txt --
 test

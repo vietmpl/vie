@@ -1,0 +1,13 @@
+# Renders var in filename
+
+exec vie new template src name=file
+! stderr .
+stdout ^src[/\\]file.txt$
+cmp src/file.txt want/file.txt
+
+-- .vie/template/{{name}}.txt --
+test
+
+-- want/file.txt --
+test
+
