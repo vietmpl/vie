@@ -1,0 +1,8 @@
+# List templates in local .vie directory
+
+mkdir .vie/template1 .vie/template2
+
+exec vie list
+! stderr .
+stdout ^template1$
+stdout ^template2$

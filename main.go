@@ -32,6 +32,7 @@ func main() {
 		newCmdContext(),
 		newCmdRender(),
 		newCmdNew(),
+		newCmdList(),
 	)
 
 	if err := root.Execute(); err != nil {

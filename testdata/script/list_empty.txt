@@ -1,0 +1,5 @@
+# List enpty produce no output and succeeds
+
+exec vie list
+! stderr .
+! stdout .
