@@ -10,7 +10,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vietmpl/vie/format"
-	"github.com/vietmpl/vie/parser"
 )
 
 func newCmdFormat() *cobra.Command {
@@ -26,7 +25,7 @@ func newCmdFormat() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				formatted, err := formatBytes(src)
+				formatted, err := format.Source(src)
 				if err != nil {
 					return err
 				}
@@ -101,7 +100,7 @@ func formatFile(path string, check bool) (changed bool, err error) {
 	if err != nil {
 		return
 	}
-	formatted, err := formatBytes(src)
+	formatted, err := format.Source(src)
 	if err != nil {
 		return
 	}
@@ -127,22 +126,4 @@ func formatFile(path string, check bool) (changed bool, err error) {
 		}
 	}
 	return
-}
-
-// TODO(skewb1k): consider moving this under the vie/format package.
-func formatBytes(src []byte) ([]byte, error) {
-	parsed, err := parser.ParseBytes(src)
-	if err != nil {
-		return nil, err
-	}
-	// Bufferize formatted output to catch errors before touching the file and
-	// compare with the original source.
-	var buf bytes.Buffer
-	// Preallocate buffer to reduce memory allocations.
-	// Heuristic: half of the original file size.
-	buf.Grow(len(src) / 2)
-	if err := format.FormatFile(&buf, parsed); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
 }
