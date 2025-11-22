@@ -2,16 +2,45 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"os"
 
-	"github.com/vietmpl/vie/internal/cli"
+	"github.com/charmbracelet/fang"
+	"github.com/spf13/cobra"
 )
 
-var use = "vie"
 var version = "v0.0.1"
 
 func main() {
-	if err := cli.Execute(context.Background(), use, version); err != nil {
+	root := &cobra.Command{
+		Use:     "vie",
+		Version: version,
+		CompletionOptions: cobra.CompletionOptions{
+			HiddenDefaultCmd: true,
+		},
+	}
+
+	root.AddCommand(
+		newCmdFormat(),
+		newCmdContext(),
+		newCmdRender(),
+		newCmdNew(),
+	)
+
+	root.SetVersionTemplate("{{.Version}}\n")
+	root.InitDefaultVersionFlag()
+	root.Flag("version").Usage = "Print version and exit"
+
+	if err := fang.Execute(
+		context.Background(),
+		root,
+		fang.WithVersion(root.Version),
+		fang.WithErrorHandler(func(w io.Writer, _ fang.Styles, err error) {
+			_, _ = fmt.Fprintln(w, err)
+		}),
+		fang.WithColorSchemeFunc(fang.AnsiColorScheme),
+	); err != nil {
 		os.Exit(1)
 	}
 }
