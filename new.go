@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vietmpl/vie/analysis"
-	"github.com/vietmpl/vie/internal/template"
+	"github.com/vietmpl/vie/template"
 )
 
 func newCmdNew() *cobra.Command {

@@ -6,7 +6,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/vietmpl/vie/internal/template"
+
+	"github.com/vietmpl/vie/template"
 	"github.com/vietmpl/vie/value"
 )
 
@@ -52,9 +53,8 @@ func TestTypes(t *testing.T) {
 			if len(diagnostics) > 0 {
 				t.Fatalf("unexpected diagnostics %v", diagnostics)
 			}
-			println(name)
-			context := cases[name].context
-			files, err := tmpl.Render(context)
+
+			files, err := tmpl.Render(cases[name].context)
 			if err != nil {
 				t.Fatal(err)
 			}
