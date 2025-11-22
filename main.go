@@ -1,25 +1,31 @@
 package main
 
 import (
-	"context"
-	"fmt"
-	"io"
+	"log"
 	"os"
 
-	"github.com/charmbracelet/fang"
 	"github.com/spf13/cobra"
 )
 
 var version = "v0.0.1"
 
 func main() {
-	root := &cobra.Command{
-		Use:     "vie",
-		Version: version,
+	log.SetFlags(0)
+	log.SetPrefix("error: ")
+
+	root := cobra.Command{
+		Use:          "vie",
+		Version:      version,
+		SilenceUsage: true,
 		CompletionOptions: cobra.CompletionOptions{
 			HiddenDefaultCmd: true,
 		},
 	}
+	root.SetErrPrefix("error:")
+
+	root.SetVersionTemplate("{{.Version}}\n")
+	root.InitDefaultVersionFlag()
+	root.Flag("version").Usage = "Print version and exit"
 
 	root.AddCommand(
 		newCmdFormat(),
@@ -28,19 +34,7 @@ func main() {
 		newCmdNew(),
 	)
 
-	root.SetVersionTemplate("{{.Version}}\n")
-	root.InitDefaultVersionFlag()
-	root.Flag("version").Usage = "Print version and exit"
-
-	if err := fang.Execute(
-		context.Background(),
-		root,
-		fang.WithVersion(root.Version),
-		fang.WithErrorHandler(func(w io.Writer, _ fang.Styles, err error) {
-			_, _ = fmt.Fprintln(w, err)
-		}),
-		fang.WithColorSchemeFunc(fang.AnsiColorScheme),
-	); err != nil {
+	if err := root.Execute(); err != nil {
 		os.Exit(1)
 	}
 }
