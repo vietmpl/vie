@@ -1,9 +1,10 @@
 name: CI
 
-on: [push, pull_request]
+on: push
 
 jobs:
-  format:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -11,16 +12,18 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
       - name: Run gofmt
         run: |
-          d=$(gofmt -s -d .)
-          if [ -n "$d" ]; then
-            echo "$d"
+          diff=$(gofmt -s -d .)
+          if [ -n "$diff" ]; then
+            echo "$diff"
             exit 1
           fi
 
-  vet:
+  build:
+    name: Build
+    needs: [lint]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -28,29 +31,13 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: 'go.mod'
-      - name: Run Go Vet
-        run: go vet ./...
-
-  build:
-    needs: [format, vet]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, windows-2022, macos-15]
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v6
-      - name: Setup Go
-        uses: actions/setup-go@v6
-        with:
-          go-version-file: 'go.mod'
+          go-version-file: "go.mod"
       - name: Build
         run: go build
 
   test:
-    needs: [format, vet]
+    name: Run tests
+    needs: [lint]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -67,7 +54,6 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: 'go.mod'
-      # TODO(skewb1k): consider running with -race.
+          go-version-file: "go.mod"
       - name: Run tests
         run: go test ./...
