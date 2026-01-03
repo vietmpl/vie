@@ -13,10 +13,10 @@ type Node interface {
 	// TODO(skewb1k): implement Pos().
 }
 
-// Stmt is any top-level block node in the source file.
-type Stmt interface {
+// Block is any top-level block node in the source file.
+type Block interface {
 	Node
-	stmtNode()
+	blockNode()
 }
 
 // Expr is any expression node.
@@ -29,68 +29,68 @@ type Expr interface {
 
 // File represents a complete parsed file.
 type File struct {
-	Stmts []Stmt
+	Blocks []Block
 }
 
-// Statements ----------------------------------------
+// Blocks ----------------------------------------
 
 type (
-	// A BadStmt node is a placeholder for statements containing
+	// A BadBlock node is a placeholder for statements containing
 	// syntax errors for which no correct statement nodes can be
 	// created.
-	BadStmt struct {
+	BadBlock struct {
 		From, To Pos // position range of bad statement
 	}
 
-	Text struct {
+	TextBlock struct {
 		Value string
 	}
 
-	Comment struct {
+	CommentBlock struct {
 		Content string
 	}
 
-	RenderStmt struct {
+	RenderBlock struct {
 		X Expr // expression
 	}
 
-	IfStmt struct {
+	IfBlock struct {
 		Cond    Expr
-		Cons    []Stmt
+		Cons    []Block
 		ElseIfs []ElseIfClause
 		Else    *ElseClause
 	}
 
-	SwitchStmt struct {
+	SwitchBlock struct {
 		Value Expr
 		Cases []CaseClause
 	}
 )
 
-func (*BadStmt) stmtNode()    {}
-func (*Text) stmtNode()       {}
-func (*Comment) stmtNode()    {}
-func (*RenderStmt) stmtNode() {}
-func (*IfStmt) stmtNode()     {}
-func (*SwitchStmt) stmtNode() {}
+func (*BadBlock) blockNode()     {}
+func (*TextBlock) blockNode()    {}
+func (*CommentBlock) blockNode() {}
+func (*RenderBlock) blockNode()  {}
+func (*IfBlock) blockNode()      {}
+func (*SwitchBlock) blockNode()  {}
 
-// Clauses are part of a larger statement but does not implement [Stmt] itself.
+// Clauses are part of a larger statement but does not implement [Block] itself.
 type (
-	// ElseIfClause represents an `else if` branch inside an [IfStmt].
+	// ElseIfClause represents an `else if` branch inside an [IfBlock].
 	ElseIfClause struct {
 		Cond Expr
-		Cons []Stmt
+		Cons []Block
 	}
 
-	// ElseClause represents a final `else` branch inside an [IfStmt].
+	// ElseClause represents a final `else` branch inside an [IfBlock].
 	ElseClause struct {
-		Cons []Stmt
+		Cons []Block
 	}
 
-	// CaseClause represents a single `case` branch inside a [SwitchStmt].
+	// CaseClause represents a single `case` branch inside a [SwitchBlock].
 	CaseClause struct {
 		List []Expr
-		Body []Stmt
+		Body []Block
 	}
 )
 
@@ -168,17 +168,17 @@ func (x *ParenExpr) Pos() Pos  { return x.Lparen }
 func (x *CallExpr) Pos() Pos   { return x.Func.Pos() }
 func (x *PipeExpr) Pos() Pos   { return x.Arg.Pos() }
 
-func (*BadExpr) node()    {}
-func (*BadStmt) node()    {}
-func (*Text) node()       {}
-func (*Comment) node()    {}
-func (*RenderStmt) node() {}
-func (*IfStmt) node()     {}
-func (*SwitchStmt) node() {}
-func (*BasicLit) node()   {}
-func (*Ident) node()      {}
-func (*UnaryExpr) node()  {}
-func (*BinaryExpr) node() {}
-func (*ParenExpr) node()  {}
-func (*CallExpr) node()   {}
-func (*PipeExpr) node()   {}
+func (*BadExpr) node()      {}
+func (*BadBlock) node()     {}
+func (*TextBlock) node()    {}
+func (*CommentBlock) node() {}
+func (*RenderBlock) node()  {}
+func (*IfBlock) node()      {}
+func (*SwitchBlock) node()  {}
+func (*BasicLit) node()     {}
+func (*Ident) node()        {}
+func (*UnaryExpr) node()    {}
+func (*BinaryExpr) node()   {}
+func (*ParenExpr) node()    {}
+func (*CallExpr) node()     {}
+func (*PipeExpr) node()     {}

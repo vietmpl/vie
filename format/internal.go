@@ -11,46 +11,46 @@ type formatter struct {
 	w io.Writer
 }
 
-func (f *formatter) stmts(stmts []ast.Stmt) {
-	for _, s := range stmts {
-		f.stmt(s)
+func (f *formatter) blocks(blocks []ast.Block) {
+	for _, b := range blocks {
+		f.block(b)
 	}
 }
 
-func (f *formatter) stmt(s ast.Stmt) {
-	switch n := s.(type) {
-	case *ast.Text:
+func (f *formatter) block(b ast.Block) {
+	switch n := b.(type) {
+	case *ast.TextBlock:
 		io.WriteString(f.w, n.Value)
 
-	case *ast.Comment:
+	case *ast.CommentBlock:
 		// TODO(skewb1k): format leading/trailing whitespaces.
 		io.WriteString(f.w, "{#")
 		io.WriteString(f.w, n.Content)
 		io.WriteString(f.w, "#}")
 
-	case *ast.RenderStmt:
+	case *ast.RenderBlock:
 		io.WriteString(f.w, "{{ ")
 		f.expr(n.X)
 		io.WriteString(f.w, " }}")
 
-	case *ast.IfStmt:
+	case *ast.IfBlock:
 		io.WriteString(f.w, "{% if ")
 		f.expr(n.Cond)
 		io.WriteString(f.w, " %}\n")
-		f.stmts(n.Cons)
+		f.blocks(n.Cons)
 		for _, elseIfClause := range n.ElseIfs {
 			io.WriteString(f.w, "{% else if ")
 			f.expr(elseIfClause.Cond)
 			io.WriteString(f.w, " %}\n")
-			f.stmts(elseIfClause.Cons)
+			f.blocks(elseIfClause.Cons)
 		}
 		if n.Else != nil {
 			io.WriteString(f.w, "{% else %}\n")
-			f.stmts(n.Else.Cons)
+			f.blocks(n.Else.Cons)
 		}
 		io.WriteString(f.w, "{% end %}\n")
 
-	case *ast.SwitchStmt:
+	case *ast.SwitchBlock:
 		io.WriteString(f.w, "{% switch ")
 		f.expr(n.Value)
 		io.WriteString(f.w, " %}\n")
@@ -58,12 +58,12 @@ func (f *formatter) stmt(s ast.Stmt) {
 			io.WriteString(f.w, "{% case ")
 			f.exprList(c.List)
 			io.WriteString(f.w, " %}\n")
-			f.stmts(c.Body)
+			f.blocks(c.Body)
 		}
 		io.WriteString(f.w, "{% end %}\n")
 
 	default:
-		panic(fmt.Sprintf("format: unexpected stmt type %T", s))
+		panic(fmt.Sprintf("format: unexpected block type %T", b))
 	}
 }
 

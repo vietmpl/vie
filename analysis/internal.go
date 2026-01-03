@@ -12,20 +12,20 @@ type internalContext struct {
 	path string
 }
 
-func (a *Analyzer) checkStmts(c internalContext, stmts []ast.Stmt) {
-	for _, s := range stmts {
-		a.checkStmt(c, s)
+func (a *Analyzer) checkBlocks(c internalContext, blocks []ast.Block) {
+	for _, b := range blocks {
+		a.checkBlock(c, b)
 	}
 }
 
-func (a *Analyzer) checkStmt(c internalContext, stmt ast.Stmt) {
-	switch s := stmt.(type) {
-	case *ast.Text:
+func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
+	switch b := block.(type) {
+	case *ast.TextBlock:
 		// Skip
-	case *ast.Comment:
+	case *ast.CommentBlock:
 		// Skip
-	case *ast.RenderStmt:
-		x := a.checkExpr(c, s.X)
+	case *ast.RenderBlock:
+		x := a.checkExpr(c, b.X)
 		switch xx := x.(type) {
 		case nil:
 			return
@@ -34,7 +34,7 @@ func (a *Analyzer) checkStmt(c internalContext, stmt ast.Stmt) {
 				a.addDiagnostic(WrongUsage{
 					WantType: value.TypeString,
 					GotType:  xx,
-					Pos_:     s.X.Pos(),
+					Pos_:     b.X.Pos(),
 					Path_:    c.path,
 				})
 			}
@@ -42,13 +42,13 @@ func (a *Analyzer) checkStmt(c internalContext, stmt ast.Stmt) {
 			a.addUsage(xx.String(), Usage{
 				Type: value.TypeString,
 				Kind: UsageKindRender,
-				Pos:  s.X.Pos(),
+				Pos:  b.X.Pos(),
 				Path: c.path,
 			})
 		}
 
-	case *ast.IfStmt:
-		cond := a.checkExpr(c, s.Cond)
+	case *ast.IfBlock:
+		cond := a.checkExpr(c, b.Cond)
 		switch condx := cond.(type) {
 		case nil:
 			return
@@ -57,7 +57,7 @@ func (a *Analyzer) checkStmt(c internalContext, stmt ast.Stmt) {
 				a.addDiagnostic(WrongUsage{
 					WantType: value.TypeBool,
 					GotType:  condx,
-					Pos_:     s.Cond.Pos(),
+					Pos_:     b.Cond.Pos(),
 					Path_:    c.path,
 				})
 			}
@@ -65,12 +65,12 @@ func (a *Analyzer) checkStmt(c internalContext, stmt ast.Stmt) {
 			a.addUsage(condx.String(), Usage{
 				Type: value.TypeBool,
 				Kind: UsageKindIf,
-				Pos:  s.Cond.Pos(),
+				Pos:  b.Cond.Pos(),
 				Path: c.path,
 			})
 		}
-		a.checkStmts(c, s.Cons)
-		for _, elseIfClause := range s.ElseIfs {
+		a.checkBlocks(c, b.Cons)
+		for _, elseIfClause := range b.ElseIfs {
 			elseIfCond := a.checkExpr(c, elseIfClause.Cond)
 			switch elseIfCondx := elseIfCond.(type) {
 			case nil:
@@ -92,16 +92,16 @@ func (a *Analyzer) checkStmt(c internalContext, stmt ast.Stmt) {
 					Path: c.path,
 				})
 			}
-			a.checkStmts(c, elseIfClause.Cons)
+			a.checkBlocks(c, elseIfClause.Cons)
 		}
-		if s.Else != nil {
-			a.checkStmts(c, s.Else.Cons)
+		if b.Else != nil {
+			a.checkBlocks(c, b.Else.Cons)
 		}
 
-	// case *ast.SwitchStmt:
+		// case *ast.SwitchBlock:
 
 	default:
-		panic(fmt.Sprintf("analyzer: unexpected stmt type %T", stmt))
+		panic(fmt.Sprintf("analyzer: unexpected block type %T", block))
 	}
 }
 

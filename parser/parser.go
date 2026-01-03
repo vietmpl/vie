@@ -44,9 +44,9 @@ func ParseBytes(src []byte) (*ast.File, error) {
 	defer p.GotoParent()
 
 	for {
-		stmt := p.parseStmt()
-		if stmt != nil {
-			f.Stmts = append(f.Stmts, stmt)
+		block := p.parseBlock()
+		if block != nil {
+			f.Blocks = append(f.Blocks, block)
 		}
 		if !p.GotoNextSibling() {
 			break
@@ -59,12 +59,12 @@ func ParseBytes(src []byte) (*ast.File, error) {
 	return &f, err
 }
 
-func (p *parser) parseStmt() ast.Stmt {
+func (p *parser) parseBlock() ast.Block {
 	n := p.Node()
 	if n.IsError() {
 		from := posFromTsPoint(n.StartPosition())
 		p.errors.Add(from, "invalid statement")
-		return &ast.BadStmt{
+		return &ast.BadBlock{
 			From: from,
 			To:   posFromTsPoint(n.EndPosition()),
 		}
@@ -94,12 +94,12 @@ func (p *parser) parseStmt() ast.Stmt {
 		if len(b) == 0 {
 			return nil
 		}
-		return &ast.Text{
+		return &ast.TextBlock{
 			Value: string(b),
 		}
 
 	case "comment_tag":
-		var comment ast.Comment
+		var comment ast.CommentBlock
 		p.GotoFirstChild()
 		defer p.GotoParent()
 
@@ -107,7 +107,7 @@ func (p *parser) parseStmt() ast.Stmt {
 		// handle `{##}`
 		commentNode := p.Node()
 		if commentNode.IsError() {
-			return p.addBadStmtAndError(
+			return p.addBadBlockAndError(
 				n.StartPosition(),
 				commentNode.EndPosition(),
 				"comments cannot contain line breaks",
@@ -119,35 +119,35 @@ func (p *parser) parseStmt() ast.Stmt {
 		return &comment
 
 	case "render":
-		var renderStmt ast.RenderStmt
+		var renderBlock ast.RenderBlock
 		p.GotoFirstChild()
 		defer p.GotoParent()
 
 		p.GotoNextSibling() // '{{'
 		from := p.Node().StartPosition()
-		renderStmt.X = p.parseExpr()
+		renderBlock.X = p.parseExpr()
 		p.GotoNextSibling() // '<expr>'
 		// handle `{{ "" "" }}`
 		nn := p.Node()
 		if nn.IsError() {
 			msg := fmt.Sprintf("unexpected %s in render statement", p.nodeContent(nn))
 			p.errors.Add(posFromTsPoint(nn.StartPosition()), msg)
-			renderStmt.X = &ast.BadExpr{
+			renderBlock.X = &ast.BadExpr{
 				From: posFromTsPoint(from),
 				// TODO(skewb1k): include all nodes left.
 				To: posFromTsPoint(nn.EndPosition()),
 			}
 		}
-		return &renderStmt
+		return &renderBlock
 
 	case "if_tag":
 		bad := false
-		var ifStmt ast.IfStmt
+		var ifBlock ast.IfBlock
 		p.GotoFirstChild()
 
 		p.GotoNextSibling() // '{%'
 		p.GotoNextSibling() // 'if'
-		ifStmt.Cond = p.parseExpr()
+		ifBlock.Cond = p.parseExpr()
 		p.GotoParent()
 
 		for p.GotoNextSibling() {
@@ -168,12 +168,12 @@ func (p *parser) parseStmt() ast.Stmt {
 						p.GotoPreviousSibling()
 						break
 					}
-					stmt := p.parseStmt()
-					if stmt != nil {
-						elseIf.Cons = append(elseIf.Cons, stmt)
+					block := p.parseBlock()
+					if block != nil {
+						elseIf.Cons = append(elseIf.Cons, block)
 					}
 				}
-				ifStmt.ElseIfs = append(ifStmt.ElseIfs, elseIf)
+				ifBlock.ElseIfs = append(ifBlock.ElseIfs, elseIf)
 
 			case "else_tag":
 				var elseClause ast.ElseClause
@@ -201,32 +201,32 @@ func (p *parser) parseStmt() ast.Stmt {
 						p.GotoPreviousSibling()
 						break
 					}
-					stmt := p.parseStmt()
-					if stmt != nil {
-						elseClause.Cons = append(elseClause.Cons, stmt)
+					block := p.parseBlock()
+					if block != nil {
+						elseClause.Cons = append(elseClause.Cons, block)
 					}
 				}
-				ifStmt.Else = &elseClause
+				ifBlock.Else = &elseClause
 
 			case "end_tag":
 				if bad {
-					return &ast.BadStmt{
+					return &ast.BadBlock{
 						From: posFromTsPoint(n.StartPosition()),
 						To:   posFromTsPoint(p.Node().EndPosition()),
 					}
 				}
-				return &ifStmt
+				return &ifBlock
 
 			default:
-				stmt := p.parseStmt()
-				if stmt != nil {
-					ifStmt.Cons = append(ifStmt.Cons, stmt)
+				block := p.parseBlock()
+				if block != nil {
+					ifBlock.Cons = append(ifBlock.Cons, block)
 				}
 			}
 		}
 		// TODO(skewb1k): restore TSCursor to the last valid node rather than
 		// advancing to EOF when an end_tag is missing.
-		return p.addBadStmtAndError(
+		return p.addBadBlockAndError(
 			n.StartPosition(),
 			p.Node().EndPosition(),
 			"expected {% end %}, found EOF",
@@ -234,12 +234,12 @@ func (p *parser) parseStmt() ast.Stmt {
 
 	case "switch_tag":
 		bad := false
-		var switchStmt ast.SwitchStmt
+		var switchBlock ast.SwitchBlock
 		p.GotoFirstChild()
 
 		p.GotoNextSibling() // '{%'
 		p.GotoNextSibling() // 'switch'
-		switchStmt.Value = p.parseExpr()
+		switchBlock.Value = p.parseExpr()
 		p.GotoParent()
 
 		for p.GotoNextSibling() {
@@ -271,21 +271,21 @@ func (p *parser) parseStmt() ast.Stmt {
 						p.GotoPreviousSibling()
 						break
 					}
-					stmt := p.parseStmt()
-					if stmt != nil {
-						caseClause.Body = append(caseClause.Body, stmt)
+					block := p.parseBlock()
+					if block != nil {
+						caseClause.Body = append(caseClause.Body, block)
 					}
 				}
-				switchStmt.Cases = append(switchStmt.Cases, caseClause)
+				switchBlock.Cases = append(switchBlock.Cases, caseClause)
 
 			case "end_tag":
 				if bad {
-					return &ast.BadStmt{
+					return &ast.BadBlock{
 						From: posFromTsPoint(n.StartPosition()),
 						To:   posFromTsPoint(p.Node().EndPosition()),
 					}
 				}
-				return &switchStmt
+				return &switchBlock
 
 			case "text":
 				// TODO(skewb1k): allow only whitespaces.
@@ -296,14 +296,14 @@ func (p *parser) parseStmt() ast.Stmt {
 		}
 		// TODO(skewb1k): restore TSCursor to the last valid node rather than
 		// advancing to EOF when an end_tag is missing.
-		return p.addBadStmtAndError(
+		return p.addBadBlockAndError(
 			n.StartPosition(),
 			p.Node().EndPosition(),
 			"expected {% end %}, found EOF",
 		)
 
 	case "end_tag", "else_if_tag", "else_tag", "case_tag":
-		return p.addBadStmtAndError(
+		return p.addBadBlockAndError(
 			n.StartPosition(),
 			n.EndPosition(),
 			// tag nodes may contain trailing \n.
@@ -311,7 +311,7 @@ func (p *parser) parseStmt() ast.Stmt {
 		)
 
 	default:
-		panic(fmt.Sprintf("parser: unexpected stmt kind %q while parsing %s", n.Kind(), p.src))
+		panic(fmt.Sprintf("parser: unexpected block kind %q while parsing %s", n.Kind(), p.src))
 	}
 }
 
@@ -466,10 +466,10 @@ func posFromTsPoint(point ts.Point) ast.Pos {
 		Character: point.Column,
 	}
 }
-func (p *parser) addBadStmtAndError(from ts.Point, to ts.Point, msg string) *ast.BadStmt {
+func (p *parser) addBadBlockAndError(from ts.Point, to ts.Point, msg string) *ast.BadBlock {
 	f := posFromTsPoint(from)
 	p.errors.Add(f, msg)
-	return &ast.BadStmt{
+	return &ast.BadBlock{
 		From: f,
 		To:   posFromTsPoint(to),
 	}

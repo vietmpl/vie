@@ -18,7 +18,7 @@ func MustRenderFile(w io.Writer, file *ast.File, context map[string]value.Value)
 		c: context,
 		w: w,
 	}
-	r.renderStmts(file.Stmts)
+	r.renderBlocks(file.Blocks)
 }
 
 type renderer struct {
@@ -26,53 +26,53 @@ type renderer struct {
 	w io.Writer
 }
 
-func (r *renderer) renderStmts(stmts []ast.Stmt) {
-	for _, s := range stmts {
-		r.renderStmt(s)
+func (r *renderer) renderBlocks(blocks []ast.Block) {
+	for _, b := range blocks {
+		r.renderBlock(b)
 	}
 }
 
-func (r *renderer) renderStmt(stmt ast.Stmt) {
-	switch s := stmt.(type) {
-	case *ast.Text:
-		_, _ = io.WriteString(r.w, s.Value)
+func (r *renderer) renderBlock(block ast.Block) {
+	switch b := block.(type) {
+	case *ast.TextBlock:
+		_, _ = io.WriteString(r.w, b.Value)
 
-	case *ast.Comment:
+	case *ast.CommentBlock:
 		// Comments do not produce output.
 
-	case *ast.RenderStmt:
-		x := r.evalExpr(s.X)
+	case *ast.RenderBlock:
+		x := r.evalExpr(b.X)
 		xv := x.(value.String)
 		_, _ = io.WriteString(r.w, string(xv))
 
-	case *ast.IfStmt:
-		condVal := r.evalExpr(s.Cond)
+	case *ast.IfBlock:
+		condVal := r.evalExpr(b.Cond)
 		cond := condVal.(value.Bool)
 
 		if cond {
-			r.renderStmts(s.Cons)
+			r.renderBlocks(b.Cons)
 		} else {
-			for _, elseIfClause := range s.ElseIfs {
+			for _, elseIfClause := range b.ElseIfs {
 				elseCondVal := r.evalExpr(elseIfClause.Cond)
 				elseCond := elseCondVal.(value.Bool)
 				if elseCond {
-					r.renderStmts(elseIfClause.Cons)
+					r.renderBlocks(elseIfClause.Cons)
 					break
 				}
 			}
-			if s.Else != nil {
-				r.renderStmts(s.Else.Cons)
+			if b.Else != nil {
+				r.renderBlocks(b.Else.Cons)
 			}
 		}
 
-	case *ast.SwitchStmt:
-		val := r.evalExpr(s.Value)
+	case *ast.SwitchBlock:
+		val := r.evalExpr(b.Value)
 
-		for _, c := range s.Cases {
+		for _, c := range b.Cases {
 			for _, e := range c.List {
 				x := r.evalExpr(e)
 				if value.Eq(x, val) {
-					r.renderStmts(c.Body)
+					r.renderBlocks(c.Body)
 					return
 				}
 			}
@@ -80,6 +80,6 @@ func (r *renderer) renderStmt(stmt ast.Stmt) {
 		panic("unreachable")
 
 	default:
-		panic(fmt.Sprintf("render: unexpected stmt type %T", stmt))
+		panic(fmt.Sprintf("render: unexpected block type %T", block))
 	}
 }

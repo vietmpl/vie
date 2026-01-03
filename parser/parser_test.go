@@ -28,11 +28,11 @@ func TestParseBytes(t *testing.T) {
 
 	unclosed := testCase{
 		file: &File{
-			Stmts: []Stmt{
-				&Text{
+			Blocks: []Block{
+				&TextBlock{
 					Value: "TOP\n",
 				},
-				&BadStmt{
+				&BadBlock{
 					From: Pos{
 						Line:      1,
 						Character: 0,
@@ -58,7 +58,7 @@ func TestParseBytes(t *testing.T) {
 	cases := map[string]testCase{
 		"empty": {
 			file: &File{
-				Stmts: nil,
+				Blocks: nil,
 			},
 		},
 		"empty-tag":           unclosed,
@@ -72,11 +72,11 @@ func TestParseBytes(t *testing.T) {
 		"unclosed-string-lit": unclosed,
 		"unclosed-if": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&BadStmt{
+					&BadBlock{
 						From: Pos{
 							Line:      1,
 							Character: 0,
@@ -100,11 +100,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"unclosed-switch": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&BadStmt{
+					&BadBlock{
 						From: Pos{
 							Line:      1,
 							Character: 0,
@@ -128,11 +128,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"unclosed-switch-case": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&BadStmt{
+					&BadBlock{
 						From: Pos{
 							Line:      1,
 							Character: 0,
@@ -156,11 +156,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"empty-render": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&RenderStmt{
+					&RenderBlock{
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
@@ -172,7 +172,7 @@ func TestParseBytes(t *testing.T) {
 							},
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "\nBOT\n",
 					},
 				},
@@ -189,11 +189,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"empty-switch": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&SwitchStmt{
+					&SwitchBlock{
 						Value: &BadExpr{
 							From: Pos{
 								Line:      1,
@@ -206,7 +206,7 @@ func TestParseBytes(t *testing.T) {
 						},
 						Cases: nil,
 					},
-					&Text{
+					&TextBlock{
 						Value: "BOT\n",
 					},
 				},
@@ -223,11 +223,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"empty-case": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&SwitchStmt{
+					&SwitchBlock{
 						Value: &BasicLit{
 							ValuePos: Pos{
 								Line:      1,
@@ -254,7 +254,7 @@ func TestParseBytes(t *testing.T) {
 							},
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "BOT\n",
 					},
 				},
@@ -271,11 +271,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"extra-case": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&SwitchStmt{
+					&SwitchBlock{
 						Value: &BasicLit{
 							ValuePos: Pos{
 								Line:      1,
@@ -302,7 +302,7 @@ func TestParseBytes(t *testing.T) {
 							},
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "BOT\n",
 					},
 				},
@@ -319,11 +319,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"empty-if": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&IfStmt{
+					&IfBlock{
 						Cond: &BadExpr{
 							From: Pos{
 								Line:      1,
@@ -338,7 +338,7 @@ func TestParseBytes(t *testing.T) {
 						ElseIfs: nil,
 						Else:    nil,
 					},
-					&Text{
+					&TextBlock{
 						Value: "BOT\n",
 					},
 				},
@@ -356,11 +356,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"empty-else-if": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&BadStmt{
+					&BadBlock{
 						From: Pos{
 							Line:      1,
 							Character: 0,
@@ -370,7 +370,7 @@ func TestParseBytes(t *testing.T) {
 							Character: 0,
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "BOT\n",
 					},
 				},
@@ -387,11 +387,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"extra-else-if": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&IfStmt{
+					&IfBlock{
 						Cond: &BasicLit{
 							ValuePos: Pos{
 								Line:      1,
@@ -418,7 +418,7 @@ func TestParseBytes(t *testing.T) {
 						},
 						Else: nil,
 					},
-					&Text{
+					&TextBlock{
 						Value: "BOT\n",
 					},
 				},
@@ -435,11 +435,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"extra-else": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&BadStmt{
+					&BadBlock{
 						From: Pos{
 							Line:      1,
 							Character: 0,
@@ -449,7 +449,7 @@ func TestParseBytes(t *testing.T) {
 							Character: 0,
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "BOT\n",
 					},
 				},
@@ -466,11 +466,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"extra-render": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&RenderStmt{
+					&RenderBlock{
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
@@ -482,7 +482,7 @@ func TestParseBytes(t *testing.T) {
 							},
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "\nBOT\n",
 					},
 				},
@@ -499,11 +499,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"extra-render-2": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&RenderStmt{
+					&RenderBlock{
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
@@ -515,7 +515,7 @@ func TestParseBytes(t *testing.T) {
 							},
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "\nBOT\n",
 					},
 				},
@@ -532,11 +532,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"trailing-end-tag": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&BadStmt{
+					&BadBlock{
 						From: Pos{
 							Line:      1,
 							Character: 0,
@@ -546,7 +546,7 @@ func TestParseBytes(t *testing.T) {
 							Character: 0,
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "BOT\n",
 					},
 				},
@@ -563,11 +563,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"trailing-case-tag": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&BadStmt{
+					&BadBlock{
 						From: Pos{
 							Line:      1,
 							Character: 0,
@@ -577,7 +577,7 @@ func TestParseBytes(t *testing.T) {
 							Character: 0,
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "BOT\n",
 					},
 				},
@@ -594,11 +594,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"render-after-switch-tag": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&BadStmt{
+					&BadBlock{
 						From: Pos{
 							Line:      1,
 							Character: 0,
@@ -608,7 +608,7 @@ func TestParseBytes(t *testing.T) {
 							Character: 0,
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "BOT\n",
 					},
 				},
@@ -616,11 +616,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"multiline-render": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&BadStmt{
+					&BadBlock{
 						From: Pos{
 							Line:      1,
 							Character: 0,
@@ -644,11 +644,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"multiline-comm": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&BadStmt{
+					&BadBlock{
 						From: Pos{
 							Line:      1,
 							Character: 0,
@@ -658,7 +658,7 @@ func TestParseBytes(t *testing.T) {
 							Character: 0,
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "\nBOT\n",
 					},
 				},
@@ -675,11 +675,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"invalid-identifier": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&RenderStmt{
+					&RenderBlock{
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
@@ -691,7 +691,7 @@ func TestParseBytes(t *testing.T) {
 							},
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "\nBOT\n",
 					},
 				},
@@ -708,11 +708,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"unclosed-call": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&RenderStmt{
+					&RenderBlock{
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
@@ -724,7 +724,7 @@ func TestParseBytes(t *testing.T) {
 							},
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "\nBOT\n",
 					},
 				},
@@ -741,11 +741,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"extra-call": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&RenderStmt{
+					&RenderBlock{
 						X: &CallExpr{
 							Func: Ident{
 								NamePos: Pos{
@@ -775,7 +775,7 @@ func TestParseBytes(t *testing.T) {
 							},
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "\nBOT\n",
 					},
 				},
@@ -793,11 +793,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"empty-pipe": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&RenderStmt{
+					&RenderBlock{
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
@@ -809,7 +809,7 @@ func TestParseBytes(t *testing.T) {
 							},
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "\nBOT\n",
 					},
 				},
@@ -826,11 +826,11 @@ func TestParseBytes(t *testing.T) {
 		},
 		"empty-pipe-2": {
 			file: &File{
-				Stmts: []Stmt{
-					&Text{
+				Blocks: []Block{
+					&TextBlock{
 						Value: "TOP\n",
 					},
-					&RenderStmt{
+					&RenderBlock{
 						X: &BadExpr{
 							From: Pos{
 								Line:      1,
@@ -842,7 +842,7 @@ func TestParseBytes(t *testing.T) {
 							},
 						},
 					},
-					&Text{
+					&TextBlock{
 						Value: "\nBOT\n",
 					},
 				},

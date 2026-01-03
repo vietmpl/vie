@@ -27,7 +27,7 @@ func (a *Analyzer) File(file *ast.File, path string) {
 	c := internalContext{
 		path: path,
 	}
-	a.checkStmts(c, file.Stmts)
+	a.checkBlocks(c, file.Blocks)
 }
 
 // Results completes type inference and returns results.

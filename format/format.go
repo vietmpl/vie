@@ -16,7 +16,7 @@ func File(dst io.Writer, file *ast.File) error {
 	f := formatter{
 		w: dst,
 	}
-	f.stmts(file.Stmts)
+	f.blocks(file.Blocks)
 	return nil
 }
 
