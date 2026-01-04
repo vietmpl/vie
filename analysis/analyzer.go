@@ -23,6 +23,7 @@ func NewAnalyzer() *Analyzer {
 
 // File analyzes a single file and records usages/diagnostics.
 // TODO(skewb1k): support context.
+// TODO(skewb1k): remove 'path' argument.
 func (a *Analyzer) File(file *ast.File, path string) {
 	c := internalContext{
 		path: path,

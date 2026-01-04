@@ -1,1 +1,0 @@
-{{ true && @upper(@undefined_func("")) }}

@@ -1,9 +1,0 @@
-{% if a %}
-{% end %}
-
-{{ a }}
-
-{% if a or true %}
-{% end %}
-
-{{ a }}

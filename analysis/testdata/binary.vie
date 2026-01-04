@@ -1,9 +1,0 @@
-{% if a && true %}
-{% else if b || true %}
-{% else if c or true %}
-{% else if d and true %}
-{% else if d < true %}
-{% else if e > true %}
-{% else if f >= true %}
-{% else if g <= true %}
-{% end %}
