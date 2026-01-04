@@ -15,14 +15,14 @@ func (t Template) Render(context map[string]value.Value) (map[string][]byte, err
 	var buf bytes.Buffer
 
 	onFile := func(f *File, parent string) error {
-		render.MustRenderFile(&buf, f.NameAST, context)
+		render.MustRenderTemplate(&buf, f.NameTemplate, context)
 		name := buf.String()
 		buf.Reset()
 		path := filepath.Join(parent, name)
 
-		if f.ContentAST != nil {
+		if f.ContentTemplate != nil {
 			path = strings.TrimSuffix(path, ".vie")
-			render.MustRenderFile(&buf, f.ContentAST, context)
+			render.MustRenderTemplate(&buf, f.ContentTemplate, context)
 			bytes := append([]byte(nil), buf.Bytes()...) // copy
 			buf.Reset()
 			if _, ok := files[path]; ok {
@@ -36,7 +36,7 @@ func (t Template) Render(context map[string]value.Value) (map[string][]byte, err
 	}
 
 	onDir := func(d *Dir, parent string) error {
-		render.MustRenderFile(&buf, d.NameAST, context)
+		render.MustRenderTemplate(&buf, d.NameTemplate, context)
 		name := buf.String()
 		buf.Reset()
 		d.Name = name

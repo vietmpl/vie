@@ -21,14 +21,14 @@ func NewAnalyzer() *Analyzer {
 	}
 }
 
-// File analyzes a single file and records usages/diagnostics.
+// Template analyzes a single file and records usages/diagnostics.
 // TODO(skewb1k): support context.
 // TODO(skewb1k): remove 'path' argument.
-func (a *Analyzer) File(file *ast.File, path string) {
+func (a *Analyzer) Template(template *ast.Template, path string) {
 	c := internalContext{
 		path: path,
 	}
-	a.checkBlocks(c, file.Blocks)
+	a.checkBlocks(c, template.Blocks)
 }
 
 // Results completes type inference and returns results.

@@ -1,8 +1,12 @@
 package ast
 
-type Pos struct {
-	Line      uint // line position in a document (zero-based)
-	Character uint // character offset on a line in a document (zero-based)
+type Location struct {
+	Line   uint
+	Column uint
+}
+
+type Template struct {
+	Blocks []Block
 }
 
 // Interfaces ------------------------------------
@@ -10,26 +14,19 @@ type Pos struct {
 // Node is the base interface implemented by all AST nodes.
 type Node interface {
 	node()
-	// TODO(skewb1k): implement Pos().
+	// TODO(skewb1k): add Start().
 }
 
-// Block is any top-level block node in the source file.
 type Block interface {
 	Node
 	blockNode()
 }
 
-// Expr is any expression node.
 type Expr interface {
 	Node
-	Pos() Pos // position of first character belonging to the expression
+	Start() Location
 	exprNode()
 	// TODO(skewb1k): add End().
-}
-
-// File represents a complete parsed file.
-type File struct {
-	Blocks []Block
 }
 
 // Blocks ----------------------------------------
@@ -39,46 +36,46 @@ type (
 	// syntax errors for which no correct statement nodes can be
 	// created.
 	BadBlock struct {
-		From, To Pos // position range of bad statement
+		From, To Location // position range of bad statement
 	}
 
 	TextBlock struct {
-		Value string
+		Content string
 	}
 
 	CommentBlock struct {
 		Content string
 	}
 
-	RenderBlock struct {
-		X Expr // expression
+	DisplayBlock struct {
+		Value Expr
 	}
 
 	IfBlock struct {
-		Cond    Expr
-		Cons    []Block
-		ElseIfs []ElseIfClause
-		Else    *ElseClause
+		Condition   Expr
+		Consequence []Block
+		ElseIfs     []ElseIfClause
+		Else        *ElseClause
 	}
 )
 
 func (*BadBlock) blockNode()     {}
 func (*TextBlock) blockNode()    {}
 func (*CommentBlock) blockNode() {}
-func (*RenderBlock) blockNode()  {}
+func (*DisplayBlock) blockNode() {}
 func (*IfBlock) blockNode()      {}
 
-// Clauses are part of a larger statement but does not implement [Block] itself.
+// Clauses are part of a larger block but does not implement [Block] itself.
 type (
 	// ElseIfClause represents an `else if` branch inside an [IfBlock].
 	ElseIfClause struct {
-		Cond Expr
-		Cons []Block
+		Condition   Expr
+		Consequence []Block
 	}
 
 	// ElseClause represents a final `else` branch inside an [IfBlock].
 	ElseClause struct {
-		Cons []Block
+		Consequence []Block
 	}
 )
 
@@ -96,74 +93,74 @@ type (
 	// syntax errors for which a correct expression node cannot be
 	// created.
 	BadExpr struct {
-		From, To Pos // position range of bad expression
+		From, To Location // position range of bad expression
 	}
 
-	BasicLit struct {
-		ValuePos Pos
-		Kind     BasicLitKind
-		Value    string
+	BasicLiteral struct {
+		Start_ Location
+		Kind   BasicLitKind
+		Value  string
 	}
 
-	Ident struct {
-		NamePos Pos    // identifier position
-		Name    string // identifier name
+	Identifier struct {
+		Start_ Location
+		Value  string
 	}
 
 	UnaryExpr struct {
-		OpPos Pos           // position of Op
-		Op    UnaryOperator // operator
-		X     Expr          // operand
+		OperatorLocation Location
+		Operator         UnaryOperator
+		Operand          Expr
 	}
 
 	BinaryExpr struct {
-		X  Expr           // left operand
-		Op BinaryOperator // operator
-		Y  Expr           // right operand
+		LOperand Expr
+		Operator BinaryOperator
+		ROperand Expr
 	}
 
 	ParenExpr struct {
-		Lparen Pos  // position of "("
-		X      Expr // parenthesized expression
+		LparenLocation Location
+		Value          Expr
 	}
 
 	CallExpr struct {
-		Func Ident  // function name
-		Args []Expr // function arguments
+		Function  Identifier
+		Arguments []Expr
 	}
 
 	PipeExpr struct {
-		Arg  Expr
-		Func Ident
+		Argument Expr
+		Function Identifier
 	}
 )
 
-func (*BadExpr) exprNode()    {}
-func (*BasicLit) exprNode()   {}
-func (*Ident) exprNode()      {}
-func (*UnaryExpr) exprNode()  {}
-func (*BinaryExpr) exprNode() {}
-func (*ParenExpr) exprNode()  {}
-func (*CallExpr) exprNode()   {}
-func (*PipeExpr) exprNode()   {}
+func (*BadExpr) exprNode()      {}
+func (*BasicLiteral) exprNode() {}
+func (*Identifier) exprNode()   {}
+func (*UnaryExpr) exprNode()    {}
+func (*BinaryExpr) exprNode()   {}
+func (*ParenExpr) exprNode()    {}
+func (*CallExpr) exprNode()     {}
+func (*PipeExpr) exprNode()     {}
 
-func (x *BadExpr) Pos() Pos    { return x.From }
-func (x *BasicLit) Pos() Pos   { return x.ValuePos }
-func (x *Ident) Pos() Pos      { return x.NamePos }
-func (x *UnaryExpr) Pos() Pos  { return x.OpPos }
-func (x *BinaryExpr) Pos() Pos { return x.X.Pos() }
-func (x *ParenExpr) Pos() Pos  { return x.Lparen }
-func (x *CallExpr) Pos() Pos   { return x.Func.Pos() }
-func (x *PipeExpr) Pos() Pos   { return x.Arg.Pos() }
+func (x *BadExpr) Start() Location      { return x.From }
+func (x *BasicLiteral) Start() Location { return x.Start_ }
+func (x *Identifier) Start() Location   { return x.Start_ }
+func (x *UnaryExpr) Start() Location    { return x.OperatorLocation }
+func (x *BinaryExpr) Start() Location   { return x.LOperand.Start() }
+func (x *ParenExpr) Start() Location    { return x.LparenLocation }
+func (x *CallExpr) Start() Location     { return x.Function.Start() }
+func (x *PipeExpr) Start() Location     { return x.Argument.Start() }
 
 func (*BadExpr) node()      {}
 func (*BadBlock) node()     {}
 func (*TextBlock) node()    {}
 func (*CommentBlock) node() {}
-func (*RenderBlock) node()  {}
+func (*DisplayBlock) node() {}
 func (*IfBlock) node()      {}
-func (*BasicLit) node()     {}
-func (*Ident) node()        {}
+func (*BasicLiteral) node() {}
+func (*Identifier) node()   {}
 func (*UnaryExpr) node()    {}
 func (*BinaryExpr) node()   {}
 func (*ParenExpr) node()    {}

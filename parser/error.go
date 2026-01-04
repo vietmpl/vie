@@ -11,7 +11,7 @@ import (
 // the offending token, and the error condition is described
 // by Msg.
 type Error struct {
-	Pos ast.Pos
+	Pos ast.Location
 	Msg string
 }
 
@@ -22,7 +22,7 @@ func (e Error) Error() string {
 type ErrorList []*Error
 
 // Add adds an [Error] with given position and error message to an [ErrorList].
-func (p *ErrorList) Add(pos ast.Pos, msg string) {
+func (p *ErrorList) Add(pos ast.Location, msg string) {
 	*p = append(*p, &Error{pos, msg})
 }
 

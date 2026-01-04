@@ -27,7 +27,7 @@ func newCmdContext() *cobra.Command {
 			}
 
 			analyzer := analysis.NewAnalyzer()
-			analyzer.File(f, path)
+			analyzer.Template(f, path)
 			tm, diagnostics := analyzer.Results()
 			if diagnostics != nil {
 				printDiagnostics(diagnostics)
@@ -46,6 +46,6 @@ func newCmdContext() *cobra.Command {
 func printDiagnostics(diagnostics []analysis.Diagnostic) {
 	for _, d := range diagnostics {
 		pos := d.Pos()
-		fmt.Printf("%s:%d:%d: %s\n", d.Path(), pos.Line, pos.Character, d.String())
+		fmt.Printf("%s:%d:%d: %s\n", d.Path(), pos.Line, pos.Column, d.String())
 	}
 }

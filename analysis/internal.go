@@ -24,8 +24,8 @@ func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
 		// Skip
 	case *ast.CommentBlock:
 		// Skip
-	case *ast.RenderBlock:
-		x := a.checkExpr(c, b.X)
+	case *ast.DisplayBlock:
+		x := a.checkExpr(c, b.Value)
 		switch xx := x.(type) {
 		case nil:
 			return
@@ -34,7 +34,7 @@ func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
 				a.addDiagnostic(WrongUsage{
 					WantType: value.TypeString,
 					GotType:  xx,
-					Pos_:     b.X.Pos(),
+					Pos_:     b.Value.Start(),
 					Path_:    c.path,
 				})
 			}
@@ -42,13 +42,13 @@ func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
 			a.addUsage(xx.String(), Usage{
 				Type: value.TypeString,
 				Kind: UsageKindRender,
-				Pos:  b.X.Pos(),
+				Pos:  b.Value.Start(),
 				Path: c.path,
 			})
 		}
 
 	case *ast.IfBlock:
-		cond := a.checkExpr(c, b.Cond)
+		cond := a.checkExpr(c, b.Condition)
 		switch condx := cond.(type) {
 		case nil:
 			return
@@ -57,7 +57,7 @@ func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
 				a.addDiagnostic(WrongUsage{
 					WantType: value.TypeBool,
 					GotType:  condx,
-					Pos_:     b.Cond.Pos(),
+					Pos_:     b.Condition.Start(),
 					Path_:    c.path,
 				})
 			}
@@ -65,13 +65,13 @@ func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
 			a.addUsage(condx.String(), Usage{
 				Type: value.TypeBool,
 				Kind: UsageKindIf,
-				Pos:  b.Cond.Pos(),
+				Pos:  b.Condition.Start(),
 				Path: c.path,
 			})
 		}
-		a.checkBlocks(c, b.Cons)
+		a.checkBlocks(c, b.Consequence)
 		for _, elseIfClause := range b.ElseIfs {
-			elseIfCond := a.checkExpr(c, elseIfClause.Cond)
+			elseIfCond := a.checkExpr(c, elseIfClause.Condition)
 			switch elseIfCondx := elseIfCond.(type) {
 			case nil:
 				return
@@ -80,7 +80,7 @@ func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
 					a.addDiagnostic(WrongUsage{
 						WantType: value.TypeBool,
 						GotType:  elseIfCondx,
-						Pos_:     elseIfClause.Cond.Pos(),
+						Pos_:     elseIfClause.Condition.Start(),
 						Path_:    c.path,
 					})
 				}
@@ -88,14 +88,14 @@ func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
 				a.addUsage(elseIfCondx.String(), Usage{
 					Type: value.TypeBool,
 					Kind: UsageKindIf,
-					Pos:  elseIfClause.Cond.Pos(),
+					Pos:  elseIfClause.Condition.Start(),
 					Path: c.path,
 				})
 			}
-			a.checkBlocks(c, elseIfClause.Cons)
+			a.checkBlocks(c, elseIfClause.Consequence)
 		}
 		if b.Else != nil {
-			a.checkBlocks(c, b.Else.Cons)
+			a.checkBlocks(c, b.Else.Consequence)
 		}
 
 	default:
@@ -111,7 +111,7 @@ func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
 // TODO(skewb1k): avoid using any to represent `[value.Type] | [TypeVar]`.
 func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 	switch e := expr.(type) {
-	case *ast.BasicLit:
+	case *ast.BasicLiteral:
 		switch e.Kind {
 		case ast.KindBool:
 			return value.TypeBool
@@ -121,11 +121,11 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 			panic(fmt.Sprintf("analyzer: unexpected BasicLit kind %d", e.Kind))
 		}
 
-	case *ast.Ident:
-		return TypeVar(e.Name)
+	case *ast.Identifier:
+		return TypeVar(e.Value)
 
 	case *ast.UnaryExpr:
-		x := a.checkExpr(c, e.X)
+		x := a.checkExpr(c, e.Operand)
 		if x == nil {
 			return nil
 		}
@@ -133,16 +133,16 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 		a.expectType(x, Usage{
 			Type: value.TypeBool,
 			Kind: UsageKindUnOp,
-			Pos:  e.X.Pos(),
+			Pos:  e.Operand.Start(),
 			Path: c.path,
 		})
 		return value.TypeBool
 
 	case *ast.BinaryExpr:
-		switch e.Op {
+		switch e.Operator {
 		case ast.CONCAT:
-			x := a.checkExpr(c, e.X)
-			y := a.checkExpr(c, e.Y)
+			x := a.checkExpr(c, e.LOperand)
+			y := a.checkExpr(c, e.ROperand)
 			if x == nil || y == nil {
 				return nil
 			}
@@ -150,20 +150,20 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 			a.expectType(x, Usage{
 				Type: value.TypeString,
 				Kind: UsageKindBinOp,
-				Pos:  e.X.Pos(),
+				Pos:  e.LOperand.Start(),
 				Path: c.path,
 			})
 			a.expectType(y, Usage{
 				Type: value.TypeString,
 				Kind: UsageKindBinOp,
-				Pos:  e.Y.Pos(),
+				Pos:  e.ROperand.Start(),
 				Path: c.path,
 			})
 			return value.TypeString
 
 		case ast.EQUAL, ast.NOT_EQUAL:
-			x := a.checkExpr(c, e.X)
-			y := a.checkExpr(c, e.Y)
+			x := a.checkExpr(c, e.LOperand)
+			y := a.checkExpr(c, e.ROperand)
 			if x == nil || y == nil {
 				return nil
 			}
@@ -178,7 +178,7 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 						a.addDiagnostic(InvalidOperation{
 							X:     xx,
 							Y:     yy,
-							Pos_:  e.Pos(),
+							Pos_:  e.Start(),
 							Path_: c.path,
 						})
 					}
@@ -187,7 +187,7 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 					a.addUsage(yy.String(), Usage{
 						Type: xx,
 						Kind: UsageKindBinOp,
-						Pos:  e.Pos(),
+						Pos:  e.Start(),
 						Path: c.path,
 					})
 				}
@@ -198,7 +198,7 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 					a.addUsage(xx.String(), Usage{
 						Type: yy,
 						Kind: UsageKindBinOp,
-						Pos:  e.Pos(),
+						Pos:  e.Start(),
 						Path: c.path,
 					})
 				// <var> is <var>
@@ -206,7 +206,7 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 					a.addDiagnostic(CrossVarTyping{
 						X:     xx,
 						Y:     yy,
-						Pos_:  e.Pos(),
+						Pos_:  e.Start(),
 						Path_: c.path,
 					})
 				}
@@ -214,8 +214,8 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 			return value.TypeBool
 
 		case ast.AND, ast.OR:
-			x := a.checkExpr(c, e.X)
-			y := a.checkExpr(c, e.Y)
+			x := a.checkExpr(c, e.LOperand)
+			y := a.checkExpr(c, e.ROperand)
 			if x == nil || y == nil {
 				return nil
 			}
@@ -223,13 +223,13 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 			a.expectType(x, Usage{
 				Type: value.TypeBool,
 				Kind: UsageKindBinOp,
-				Pos:  e.X.Pos(),
+				Pos:  e.LOperand.Start(),
 				Path: c.path,
 			})
 			a.expectType(y, Usage{
 				Type: value.TypeBool,
 				Kind: UsageKindBinOp,
-				Pos:  e.Y.Pos(),
+				Pos:  e.ROperand.Start(),
 				Path: c.path,
 			})
 			return value.TypeBool
@@ -239,13 +239,13 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 		}
 
 	case *ast.ParenExpr:
-		return a.checkExpr(c, e.X)
+		return a.checkExpr(c, e.Value)
 
 	case *ast.CallExpr:
-		return a.checkFunc(c, e.Func, e.Args)
+		return a.checkFunc(c, e.Function, e.Arguments)
 
 	case *ast.PipeExpr:
-		return a.checkFunc(c, e.Func, []ast.Expr{e.Arg})
+		return a.checkFunc(c, e.Function, []ast.Expr{e.Argument})
 
 	default:
 		panic(fmt.Sprintf("analyzer: unexpected expr type %T", expr))
@@ -256,13 +256,13 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 // ensures argument count and types match the builtin definition, producing
 // diagnostics on mismatch. Returns the function’s declared return type if
 // found, or nil on failure.
-func (a *Analyzer) checkFunc(c internalContext, ident ast.Ident, exprs []ast.Expr) any {
+func (a *Analyzer) checkFunc(c internalContext, ident ast.Identifier, exprs []ast.Expr) any {
 	fn, err := builtin.LookupFunction(ident)
 	if err != nil {
 		a.addDiagnostic(BuiltinNotFound{
-			Name:  ident.Name,
+			Name:  ident.Value,
 			Msg:   err.Error(),
-			Pos_:  ident.Pos(),
+			Pos_:  ident.Start(),
 			Path_: c.path,
 		})
 		return nil
@@ -270,11 +270,11 @@ func (a *Analyzer) checkFunc(c internalContext, ident ast.Ident, exprs []ast.Exp
 	// TODO(skewb1k): improve error messages for PipeExpr.
 	if len(exprs) != len(fn.ArgTypes) {
 		a.addDiagnostic(IncorrectArgCount{
-			FuncName: ident.Name,
+			FuncName: ident.Value,
 			Got:      len(exprs),
 			Want:     len(fn.ArgTypes),
 			// TODO(skewb1k): use proper arg pos.
-			Pos_:  ident.Pos(),
+			Pos_:  ident.Start(),
 			Path_: c.path,
 		})
 		return fn.ReturnType
@@ -303,7 +303,7 @@ func (a *Analyzer) checkFunc(c internalContext, ident ast.Ident, exprs []ast.Exp
 		a.expectType(arg.typ, Usage{
 			Type: fn.ArgTypes[i],
 			Kind: UsageKindCall,
-			Pos:  arg.expr.Pos(),
+			Pos:  arg.expr.Start(),
 			Path: c.path,
 		})
 	}

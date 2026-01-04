@@ -10,22 +10,22 @@ import (
 
 func (r renderer) evalExpr(expr ast.Expr) value.Value {
 	switch e := expr.(type) {
-	case *ast.BasicLit:
+	case *ast.BasicLiteral:
 		return value.FromBasicLit(e)
 
-	case *ast.Ident:
-		return r.c[e.Name]
+	case *ast.Identifier:
+		return r.c[e.Value]
 
 	case *ast.UnaryExpr:
-		x := r.evalExpr(e.X)
+		x := r.evalExpr(e.Operand)
 		// Assume that n.Op is valid and contains only '!' and 'not' operators.
 		xx := x.(value.Bool)
 		return !xx
 
 	case *ast.BinaryExpr:
-		x := r.evalExpr(e.X)
-		y := r.evalExpr(e.Y)
-		switch e.Op {
+		x := r.evalExpr(e.LOperand)
+		y := r.evalExpr(e.ROperand)
+		switch e.Operator {
 		case ast.CONCAT:
 			xx := x.(value.String)
 			yy := y.(value.String)
@@ -50,21 +50,21 @@ func (r renderer) evalExpr(expr ast.Expr) value.Value {
 			return xx.Or(yy)
 
 		default:
-			panic(fmt.Sprintf("render: unexpected binary operator: %T", e.Op))
+			panic(fmt.Sprintf("render: unexpected binary operator: %T", e.Operator))
 		}
 
 	case *ast.ParenExpr:
-		return r.evalExpr(e.X)
+		return r.evalExpr(e.Value)
 
 	case *ast.CallExpr:
-		fn, _ := builtin.LookupFunction(e.Func)
-		args := r.evalExprList(e.Args)
+		fn, _ := builtin.LookupFunction(e.Function)
+		args := r.evalExprList(e.Arguments)
 		res, _ := fn.Call(args)
 		return res
 
 	case *ast.PipeExpr:
-		fn, _ := builtin.LookupFunction(e.Func)
-		arg := r.evalExpr(e.Arg)
+		fn, _ := builtin.LookupFunction(e.Function)
+		arg := r.evalExpr(e.Argument)
 		res, _ := fn.Call([]value.Value{arg})
 		return res
 

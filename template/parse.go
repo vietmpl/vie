@@ -46,7 +46,7 @@ func parseDir(parent, dirName string) (*Dir, error) {
 			if err != nil {
 				return nil, err
 			}
-			subDir.NameAST = nameAST
+			subDir.NameTemplate = nameAST
 			dir.Dirs = append(dir.Dirs, subDir)
 		} else {
 			path := filepath.Join(dirPath, name)
@@ -55,9 +55,9 @@ func parseDir(parent, dirName string) (*Dir, error) {
 				return nil, err
 			}
 			f := &File{
-				Name:    name,
-				NameAST: nameAST,
-				Content: content,
+				Name:         name,
+				NameTemplate: nameAST,
+				Content:      content,
 			}
 			f.Content = content
 			// Parse file content if its Vie file
@@ -66,7 +66,7 @@ func parseDir(parent, dirName string) (*Dir, error) {
 				if err != nil {
 					return nil, err
 				}
-				f.ContentAST = contentAST
+				f.ContentTemplate = contentAST
 			}
 			dir.Files = append(dir.Files, f)
 		}

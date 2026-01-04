@@ -19,7 +19,7 @@ type Bool bool
 
 func (Bool) Type() Type { return TypeBool }
 
-func FromBasicLit(l *ast.BasicLit) Value {
+func FromBasicLit(l *ast.BasicLiteral) Value {
 	switch l.Kind {
 	case ast.KindBool:
 		return Bool(l.Value == "true")

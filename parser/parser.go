@@ -20,7 +20,7 @@ type parser struct {
 	errors ErrorList
 }
 
-func ParseBytes(src []byte) (*ast.File, error) {
+func ParseBytes(src []byte) (*ast.Template, error) {
 	tsParser := ts.NewParser()
 	_ = tsParser.SetLanguage(vieLanguage)
 	defer tsParser.Close()
@@ -36,17 +36,17 @@ func ParseBytes(src []byte) (*ast.File, error) {
 		src:        src,
 	}
 
-	var f ast.File
+	var template ast.Template
 	if !p.GotoFirstChild() {
 		// the file is empty.
-		return &f, nil
+		return &template, nil
 	}
 	defer p.GotoParent()
 
 	for {
 		block := p.parseBlock()
 		if block != nil {
-			f.Blocks = append(f.Blocks, block)
+			template.Blocks = append(template.Blocks, block)
 		}
 		if !p.GotoNextSibling() {
 			break
@@ -56,7 +56,7 @@ func ParseBytes(src []byte) (*ast.File, error) {
 	if p.errors.Len() > 0 {
 		err = p.errors
 	}
-	return &f, err
+	return &template, err
 }
 
 func (p *parser) parseBlock() ast.Block {
@@ -95,7 +95,7 @@ func (p *parser) parseBlock() ast.Block {
 			return nil
 		}
 		return &ast.TextBlock{
-			Value: string(b),
+			Content: string(b),
 		}
 
 	case "comment_tag":
@@ -119,26 +119,26 @@ func (p *parser) parseBlock() ast.Block {
 		return &comment
 
 	case "render":
-		var renderBlock ast.RenderBlock
+		var displayBlock ast.DisplayBlock
 		p.GotoFirstChild()
 		defer p.GotoParent()
 
 		p.GotoNextSibling() // '{{'
 		from := p.Node().StartPosition()
-		renderBlock.X = p.parseExpr()
+		displayBlock.Value = p.parseExpr()
 		p.GotoNextSibling() // '<expr>'
 		// handle `{{ "" "" }}`
 		nn := p.Node()
 		if nn.IsError() {
-			msg := fmt.Sprintf("unexpected %s in render statement", p.nodeContent(nn))
+			msg := fmt.Sprintf("unexpected %s in display statement", p.nodeContent(nn))
 			p.errors.Add(posFromTsPoint(nn.StartPosition()), msg)
-			renderBlock.X = &ast.BadExpr{
+			displayBlock.Value = &ast.BadExpr{
 				From: posFromTsPoint(from),
 				// TODO(skewb1k): include all nodes left.
 				To: posFromTsPoint(nn.EndPosition()),
 			}
 		}
-		return &renderBlock
+		return &displayBlock
 
 	case "if_tag":
 		bad := false
@@ -147,7 +147,7 @@ func (p *parser) parseBlock() ast.Block {
 
 		p.GotoNextSibling() // '{%'
 		p.GotoNextSibling() // 'if'
-		ifBlock.Cond = p.parseExpr()
+		ifBlock.Condition = p.parseExpr()
 		p.GotoParent()
 
 		for p.GotoNextSibling() {
@@ -159,7 +159,7 @@ func (p *parser) parseBlock() ast.Block {
 				p.GotoNextSibling() // '{%'
 				p.GotoNextSibling() // 'else'
 				p.GotoNextSibling() // 'if'
-				elseIf.Cond = p.parseExpr()
+				elseIf.Condition = p.parseExpr()
 				p.GotoParent()
 
 				for p.GotoNextSibling() {
@@ -170,7 +170,7 @@ func (p *parser) parseBlock() ast.Block {
 					}
 					block := p.parseBlock()
 					if block != nil {
-						elseIf.Cons = append(elseIf.Cons, block)
+						elseIf.Consequence = append(elseIf.Consequence, block)
 					}
 				}
 				ifBlock.ElseIfs = append(ifBlock.ElseIfs, elseIf)
@@ -203,7 +203,7 @@ func (p *parser) parseBlock() ast.Block {
 					}
 					block := p.parseBlock()
 					if block != nil {
-						elseClause.Cons = append(elseClause.Cons, block)
+						elseClause.Consequence = append(elseClause.Consequence, block)
 					}
 				}
 				ifBlock.Else = &elseClause
@@ -220,7 +220,7 @@ func (p *parser) parseBlock() ast.Block {
 			default:
 				block := p.parseBlock()
 				if block != nil {
-					ifBlock.Cons = append(ifBlock.Cons, block)
+					ifBlock.Consequence = append(ifBlock.Consequence, block)
 				}
 			}
 		}
@@ -257,23 +257,23 @@ func (p *parser) parseExpr() ast.Expr {
 	}
 	switch n.Kind() {
 	case "string_literal":
-		return &ast.BasicLit{
-			ValuePos: posFromTsPoint(n.StartPosition()),
-			Kind:     ast.KindString,
-			Value:    p.nodeContent(n),
+		return &ast.BasicLiteral{
+			Start_: posFromTsPoint(n.StartPosition()),
+			Kind:   ast.KindString,
+			Value:  p.nodeContent(n),
 		}
 
 	case "boolean_literal":
-		return &ast.BasicLit{
-			ValuePos: posFromTsPoint(n.StartPosition()),
-			Kind:     ast.KindBool,
-			Value:    p.nodeContent(n),
+		return &ast.BasicLiteral{
+			Start_: posFromTsPoint(n.StartPosition()),
+			Kind:   ast.KindBool,
+			Value:  p.nodeContent(n),
 		}
 
 	case "identifier":
-		return &ast.Ident{
-			NamePos: posFromTsPoint(n.StartPosition()),
-			Name:    p.nodeContent(n),
+		return &ast.Identifier{
+			Start_: posFromTsPoint(n.StartPosition()),
+			Value:  p.nodeContent(n),
 		}
 
 	case "unary_expression":
@@ -282,11 +282,11 @@ func (p *parser) parseExpr() ast.Expr {
 		var unary ast.UnaryExpr
 
 		nn := p.Node()
-		unary.OpPos = posFromTsPoint(nn.StartPosition())
-		unary.Op = ast.ParseUnaryOperator(p.nodeContent(nn))
+		unary.OperatorLocation = posFromTsPoint(nn.StartPosition())
+		unary.Operator = ast.ParseUnaryOperator(p.nodeContent(nn))
 
 		p.GotoNextSibling()
-		unary.X = p.parseExpr()
+		unary.Operand = p.parseExpr()
 
 		return &unary
 
@@ -295,13 +295,13 @@ func (p *parser) parseExpr() ast.Expr {
 		defer p.GotoParent()
 		var binary ast.BinaryExpr
 
-		binary.X = p.parseExpr()
+		binary.LOperand = p.parseExpr()
 
 		p.GotoNextSibling()
-		binary.Op = ast.ParseBinaryOperator(p.nodeContent(p.Node()))
+		binary.Operator = ast.ParseBinaryOperator(p.nodeContent(p.Node()))
 
 		p.GotoNextSibling()
-		binary.Y = p.parseExpr()
+		binary.ROperand = p.parseExpr()
 
 		return &binary
 
@@ -311,13 +311,13 @@ func (p *parser) parseExpr() ast.Expr {
 		var call ast.CallExpr
 
 		nn := p.Node()
-		call.Func = ast.Ident{
-			NamePos: posFromTsPoint(nn.StartPosition()),
-			Name:    p.nodeContent(nn),
+		call.Function = ast.Identifier{
+			Start_: posFromTsPoint(nn.StartPosition()),
+			Value:  p.nodeContent(nn),
 		}
 		p.GotoNextSibling()
 
-		call.Args = p.parseExprList()
+		call.Arguments = p.parseExprList()
 		return &call
 
 	case "pipe_expression":
@@ -325,7 +325,7 @@ func (p *parser) parseExpr() ast.Expr {
 		defer p.GotoParent()
 		var pipe ast.PipeExpr
 
-		pipe.Arg = p.parseExpr()
+		pipe.Argument = p.parseExpr()
 		p.GotoNextSibling() // <expr>
 
 		p.GotoNextSibling() // '|'
@@ -340,7 +340,7 @@ func (p *parser) parseExpr() ast.Expr {
 			}
 		}
 
-		pipe.Func = ast.Ident{Name: p.nodeContent(p.Node())}
+		pipe.Function = ast.Identifier{Value: p.nodeContent(p.Node())}
 
 		return &pipe
 
@@ -349,10 +349,10 @@ func (p *parser) parseExpr() ast.Expr {
 		defer p.GotoParent()
 		var paren ast.ParenExpr
 
-		paren.Lparen = posFromTsPoint(p.Node().StartPosition())
+		paren.LparenLocation = posFromTsPoint(p.Node().StartPosition())
 		p.GotoNextSibling()
 
-		paren.X = p.parseExpr()
+		paren.Value = p.parseExpr()
 		return &paren
 
 	// case "render","end_tag", "else_if_tag", "else_tag", "case_tag":
@@ -390,10 +390,10 @@ func (p *parser) nodeContent(n *ts.Node) string {
 	return string(p.src[n.StartByte():n.EndByte()])
 }
 
-func posFromTsPoint(point ts.Point) ast.Pos {
-	return ast.Pos{
-		Line:      point.Row,
-		Character: point.Column,
+func posFromTsPoint(point ts.Point) ast.Location {
+	return ast.Location{
+		Line:   point.Row,
+		Column: point.Column,
 	}
 }
 

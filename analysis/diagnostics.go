@@ -9,14 +9,14 @@ import (
 
 type Diagnostic interface {
 	String() string
-	Pos() ast.Pos
+	Pos() ast.Location
 	Path() string
 }
 
 type WrongUsage struct {
 	WantType value.Type
 	GotType  value.Type
-	Pos_     ast.Pos
+	Pos_     ast.Location
 	Path_    string
 }
 
@@ -24,7 +24,7 @@ func (d WrongUsage) String() string {
 	return fmt.Sprintf("cannot use %s as %s", d.GotType, d.WantType)
 }
 
-func (d WrongUsage) Pos() ast.Pos {
+func (d WrongUsage) Pos() ast.Location {
 	return d.Pos_
 }
 
@@ -35,7 +35,7 @@ func (d WrongUsage) Path() string {
 type InvalidOperation struct {
 	X     value.Type
 	Y     value.Type
-	Pos_  ast.Pos
+	Pos_  ast.Location
 	Path_ string
 }
 
@@ -44,7 +44,7 @@ func (d InvalidOperation) String() string {
 	return fmt.Sprintf("invalid operation: mismatched types %s and %s", d.X, d.Y)
 }
 
-func (d InvalidOperation) Pos() ast.Pos {
+func (d InvalidOperation) Pos() ast.Location {
 	return d.Pos_
 }
 
@@ -55,7 +55,7 @@ func (d InvalidOperation) Path() string {
 type CrossVarTyping struct {
 	X     TypeVar
 	Y     TypeVar
-	Pos_  ast.Pos
+	Pos_  ast.Location
 	Path_ string
 }
 
@@ -63,7 +63,7 @@ func (d CrossVarTyping) String() string {
 	return fmt.Sprintf("type of %s depends on type of %s (cross-var typing is not supported yet)", d.X, d.Y)
 }
 
-func (d CrossVarTyping) Pos() ast.Pos {
+func (d CrossVarTyping) Pos() ast.Location {
 	return d.Pos_
 }
 
@@ -74,7 +74,7 @@ func (d CrossVarTyping) Path() string {
 type BuiltinNotFound struct {
 	Name  string
 	Msg   string
-	Pos_  ast.Pos
+	Pos_  ast.Location
 	Path_ string
 }
 
@@ -82,7 +82,7 @@ func (d BuiltinNotFound) String() string {
 	return d.Msg
 }
 
-func (d BuiltinNotFound) Pos() ast.Pos {
+func (d BuiltinNotFound) Pos() ast.Location {
 	return d.Pos_
 }
 
@@ -94,7 +94,7 @@ type IncorrectArgCount struct {
 	FuncName string
 	Want     int
 	Got      int
-	Pos_     ast.Pos
+	Pos_     ast.Location
 	Path_    string
 }
 
@@ -102,7 +102,7 @@ func (d IncorrectArgCount) String() string {
 	return fmt.Sprintf("function %q expects %d argument(s), but %d were provided", d.FuncName, d.Want, d.Got)
 }
 
-func (d IncorrectArgCount) Pos() ast.Pos {
+func (d IncorrectArgCount) Pos() ast.Location {
 	return d.Pos_
 }
 

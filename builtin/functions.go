@@ -9,8 +9,8 @@ import (
 	"github.com/vietmpl/vie/value"
 )
 
-func LookupFunction(ident ast.Ident) (value.Function, error) {
-	name := ident.Name
+func LookupFunction(ident ast.Identifier) (value.Function, error) {
+	name := ident.Value
 	if name[0] != '@' {
 		return value.Function{}, fmt.Errorf(
 			"function %s is undefined. Only builtin functions (starting with '@') are supported, user-defined functions are not yet implemented",

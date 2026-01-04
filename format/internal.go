@@ -20,7 +20,7 @@ func (f *formatter) blocks(blocks []ast.Block) {
 func (f *formatter) block(b ast.Block) {
 	switch n := b.(type) {
 	case *ast.TextBlock:
-		io.WriteString(f.w, n.Value)
+		io.WriteString(f.w, n.Content)
 
 	case *ast.CommentBlock:
 		// TODO(skewb1k): format leading/trailing whitespaces.
@@ -28,25 +28,25 @@ func (f *formatter) block(b ast.Block) {
 		io.WriteString(f.w, n.Content)
 		io.WriteString(f.w, "#}")
 
-	case *ast.RenderBlock:
+	case *ast.DisplayBlock:
 		io.WriteString(f.w, "{{ ")
-		f.expr(n.X)
+		f.expr(n.Value)
 		io.WriteString(f.w, " }}")
 
 	case *ast.IfBlock:
 		io.WriteString(f.w, "{% if ")
-		f.expr(n.Cond)
+		f.expr(n.Condition)
 		io.WriteString(f.w, " %}\n")
-		f.blocks(n.Cons)
+		f.blocks(n.Consequence)
 		for _, elseIfClause := range n.ElseIfs {
 			io.WriteString(f.w, "{% else if ")
-			f.expr(elseIfClause.Cond)
+			f.expr(elseIfClause.Condition)
 			io.WriteString(f.w, " %}\n")
-			f.blocks(elseIfClause.Cons)
+			f.blocks(elseIfClause.Consequence)
 		}
 		if n.Else != nil {
 			io.WriteString(f.w, "{% else %}\n")
-			f.blocks(n.Else.Cons)
+			f.blocks(n.Else.Consequence)
 		}
 		io.WriteString(f.w, "{% end %}\n")
 
@@ -57,38 +57,38 @@ func (f *formatter) block(b ast.Block) {
 
 func (f *formatter) expr(e ast.Expr) {
 	switch n := e.(type) {
-	case *ast.BasicLit:
+	case *ast.BasicLiteral:
 		io.WriteString(f.w, n.Value)
 
-	case *ast.Ident:
-		io.WriteString(f.w, n.Name)
+	case *ast.Identifier:
+		io.WriteString(f.w, n.Value)
 
 	case *ast.UnaryExpr:
-		io.WriteString(f.w, n.Op.String())
-		f.expr(n.X)
+		io.WriteString(f.w, n.Operator.String())
+		f.expr(n.Operand)
 
 	case *ast.BinaryExpr:
-		f.expr(n.X)
+		f.expr(n.LOperand)
 		io.WriteString(f.w, " ")
-		io.WriteString(f.w, n.Op.String())
+		io.WriteString(f.w, n.Operator.String())
 		io.WriteString(f.w, " ")
-		f.expr(n.Y)
+		f.expr(n.ROperand)
 
 	case *ast.ParenExpr:
 		io.WriteString(f.w, "(")
-		f.expr(n.X)
+		f.expr(n.Value)
 		io.WriteString(f.w, ")")
 
 	case *ast.CallExpr:
-		f.expr(&n.Func)
+		f.expr(&n.Function)
 		io.WriteString(f.w, "(")
-		f.exprList(n.Args)
+		f.exprList(n.Arguments)
 		io.WriteString(f.w, ")")
 
 	case *ast.PipeExpr:
-		f.expr(n.Arg)
+		f.expr(n.Argument)
 		io.WriteString(f.w, " | ")
-		io.WriteString(f.w, n.Func.Name)
+		io.WriteString(f.w, n.Function.Value)
 
 	default:
 		panic(fmt.Sprintf("format: unexpected expr type %T", e))

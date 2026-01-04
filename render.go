@@ -35,7 +35,7 @@ func newCmdRender() *cobra.Command {
 			}
 
 			analyzer := analysis.NewAnalyzer()
-			analyzer.File(f, path)
+			analyzer.Template(f, path)
 			typemap, diagnostics := analyzer.Results()
 			if len(diagnostics) > 0 {
 				printDiagnostics(diagnostics)
@@ -52,7 +52,7 @@ func newCmdRender() *cobra.Command {
 
 			checkForUnusedVars(typemap, context)
 
-			render.MustRenderFile(os.Stdout, f, context)
+			render.MustRenderTemplate(os.Stdout, f, context)
 			return nil
 		},
 	}

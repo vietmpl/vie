@@ -35,7 +35,7 @@ func TestTypes(t *testing.T) {
 			}
 
 			analyzer := analysis.NewAnalyzer()
-			analyzer.File(f, "")
+			analyzer.Template(f, "")
 			typemap, diagnostics := analyzer.Results()
 
 			if diff := cmp.Diff(testCase.typemap, typemap); diff != "" {

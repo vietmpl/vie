@@ -8,15 +8,15 @@ import (
 	"github.com/vietmpl/vie/parser"
 )
 
-// File formats input file and writes the result to dst.
+// Template formats input file and writes the result to dst.
 //
 // The function may return early (before the entire result is written)
 // and return a formatting error, for instance due to an incorrect AST.
-func File(dst io.Writer, file *ast.File) error {
+func Template(dst io.Writer, template *ast.Template) error {
 	f := formatter{
 		w: dst,
 	}
-	f.blocks(file.Blocks)
+	f.blocks(template.Blocks)
 	return nil
 }
 
@@ -25,14 +25,14 @@ func File(dst io.Writer, file *ast.File) error {
 // correct Vie Template file.
 //
 // It buffers the entire formatted result internally; callers that want to
-// stream output directly could use [File] instead.
+// stream output directly could use [Template] instead.
 func Source(src []byte) ([]byte, error) {
 	parsed, err := parser.ParseBytes(src)
 	if err != nil {
 		return nil, err
 	}
 	var buf bytes.Buffer
-	if err := File(&buf, parsed); err != nil {
+	if err := Template(&buf, parsed); err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil

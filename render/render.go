@@ -8,17 +8,17 @@ import (
 	"github.com/vietmpl/vie/value"
 )
 
-// MustRenderFile renders a parsed template using the provided context.
+// MustRenderTemplate renders a parsed template using the provided context.
 //
-// It assumes that both the file and the context have been type-checked using
+// It assumes that both the template and the context have been type-checked using
 // the analysis package. If either is invalid, behavior is undefined and may
 // panic. For user-friendly error messages, use RenderFile instead.
-func MustRenderFile(w io.Writer, file *ast.File, context map[string]value.Value) {
+func MustRenderTemplate(w io.Writer, template *ast.Template, context map[string]value.Value) {
 	r := renderer{
 		c: context,
 		w: w,
 	}
-	r.renderBlocks(file.Blocks)
+	r.renderBlocks(template.Blocks)
 }
 
 type renderer struct {
@@ -35,33 +35,33 @@ func (r *renderer) renderBlocks(blocks []ast.Block) {
 func (r *renderer) renderBlock(block ast.Block) {
 	switch b := block.(type) {
 	case *ast.TextBlock:
-		_, _ = io.WriteString(r.w, b.Value)
+		_, _ = io.WriteString(r.w, b.Content)
 
 	case *ast.CommentBlock:
 		// Comments do not produce output.
 
-	case *ast.RenderBlock:
-		x := r.evalExpr(b.X)
+	case *ast.DisplayBlock:
+		x := r.evalExpr(b.Value)
 		xv := x.(value.String)
 		_, _ = io.WriteString(r.w, string(xv))
 
 	case *ast.IfBlock:
-		condVal := r.evalExpr(b.Cond)
+		condVal := r.evalExpr(b.Condition)
 		cond := condVal.(value.Bool)
 
 		if cond {
-			r.renderBlocks(b.Cons)
+			r.renderBlocks(b.Consequence)
 		} else {
 			for _, elseIfClause := range b.ElseIfs {
-				elseCondVal := r.evalExpr(elseIfClause.Cond)
+				elseCondVal := r.evalExpr(elseIfClause.Condition)
 				elseCond := elseCondVal.(value.Bool)
 				if elseCond {
-					r.renderBlocks(elseIfClause.Cons)
+					r.renderBlocks(elseIfClause.Consequence)
 					break
 				}
 			}
 			if b.Else != nil {
-				r.renderBlocks(b.Else.Cons)
+				r.renderBlocks(b.Else.Consequence)
 			}
 		}
 

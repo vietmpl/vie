@@ -18,6 +18,6 @@ const (
 type Usage struct {
 	Type value.Type
 	Kind usageKind
-	Pos  ast.Pos
+	Pos  ast.Location
 	Path string
 }

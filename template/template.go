@@ -9,15 +9,15 @@ type Template struct {
 }
 
 type Dir struct {
-	Name    string
-	NameAST *ast.File
-	Files   []*File
-	Dirs    []*Dir
+	Name         string
+	NameTemplate *ast.Template
+	Files        []*File
+	Dirs         []*Dir
 }
 
 type File struct {
-	Name       string
-	NameAST    *ast.File
-	Content    []byte
-	ContentAST *ast.File
+	Name            string
+	NameTemplate    *ast.Template
+	Content         []byte
+	ContentTemplate *ast.Template
 }
