@@ -24,19 +24,9 @@ func FromBasicLit(l *ast.BasicLiteral) Value {
 	case ast.KindBool:
 		return Bool(l.Value == "true")
 	case ast.KindString:
-		// TODO(skewb1k): Replace this hack with a manual parser that handles
-		// escape sequences and quote types. Currently we wrap single-quote
-		// literals in quotes and use [strconv.Unquote] to parse them. This works
-		// for basic cases but incorrectly allows backticks and mixes rune vs
-		// string parsing.
-		s := string(l.Value)
-		if l.Value[0] == '\'' {
-			s = "\"" + s + "\""
-			v, _ := strconv.Unquote(s)
-			return String(v[1 : len(v)-1])
-		}
-		v, _ := strconv.Unquote(s)
-		return String(v)
+		// TODO(skewb1k): Replace this hack with a manual parser.
+		value, _ := strconv.Unquote(l.Value)
+		return String(value)
 	default:
 		panic("value: unsupported literal kind")
 	}
