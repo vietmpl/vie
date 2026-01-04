@@ -1,3 +1,0 @@
-{% if (true or false) and true %}
-1
-{% end %}
