@@ -1,5 +1,5 @@
 TOP
 {% if true %}
-{% else if "" extra %}
+{% elseif "" extra %}
 {% end %}
 BOT

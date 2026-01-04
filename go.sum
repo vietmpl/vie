@@ -45,8 +45,8 @@ github.com/tree-sitter/tree-sitter-ruby v0.23.1 h1:T/NKHUA+iVbHM440hFx+lzVOzS4dV
 github.com/tree-sitter/tree-sitter-ruby v0.23.1/go.mod h1:kUS4kCCQloFcdX6sdpr8p6r2rogbM6ZjTox5ZOQy8cA=
 github.com/tree-sitter/tree-sitter-rust v0.23.2 h1:6AtoooCW5GqNrRpfnvl0iUhxTAZEovEmLKDbyHlfw90=
 github.com/tree-sitter/tree-sitter-rust v0.23.2/go.mod h1:hfeGWic9BAfgTrc7Xf6FaOAguCFJRo3RBbs7QJ6D7MI=
-github.com/vietmpl/tree-sitter-vie v0.2.4 h1:L90Xo/O0mZ7OYwULcXD6ZS3TmFagAIyYxX7A++iX3+U=
-github.com/vietmpl/tree-sitter-vie v0.2.4/go.mod h1:ryJ+4kFd+wFHJcmpSsT7bS2HJHQg9dOCAajnrGTIB5c=
+github.com/vietmpl/tree-sitter-vie v0.3.0 h1:ALSav7Y3+sf05TR5cSOFZKlomUZ0xwmlynDYoKZFtWg=
+github.com/vietmpl/tree-sitter-vie v0.3.0/go.mod h1:ryJ+4kFd+wFHJcmpSsT7bS2HJHQg9dOCAajnrGTIB5c=
 golang.org/x/sys v0.38.0 h1:3yZWxaJjBmCWXqhN1qh02AkOnCQ1poK6oF+a7xWL6Gc=
 golang.org/x/sys v0.38.0/go.mod h1:OgkHotnGiDImocRcuBABYBEXf8A9a87e/uXjp9XT3ks=
 golang.org/x/tools v0.38.0 h1:Hx2Xv8hISq8Lm16jvBZ2VQf+RLmbd7wVUsALibYI/IQ=

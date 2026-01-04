@@ -34,6 +34,14 @@ var stableTests = [...]struct {
 		"multiline if block",
 		"a\n{% if true %}\nb\n{% end %}\nc",
 	},
+	{
+		"inline if",
+		"a{% if true %}b{% elseif false %}{% else %}{% end %}c",
+	},
+	{
+		"trailing whitespace",
+		"a\n{% if true %}  \nb\n{% end %} \nc",
+	},
 }
 
 var transformTests = [...]struct {
@@ -42,14 +50,9 @@ var transformTests = [...]struct {
 	expected_source string
 }{
 	{
-		"inline if expands to multiline",
-		"a{% if true %}b{% end %}c",
-		"a\n{% if true %}\nb\n{% end %}\nc",
-	},
-	{
-		"trailing whitespace is removed",
-		"a\n{% if true %}  \nb\n{% end %} \nc",
-		"a\n{% if true %}\nb\n{% end %}\nc",
+		"spaces inside display",
+		"{{name}}",
+		"{{ name }}",
 	},
 }
 

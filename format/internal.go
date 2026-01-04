@@ -36,19 +36,19 @@ func (f *formatter) block(b ast.Block) {
 	case *ast.IfBlock:
 		io.WriteString(f.w, "{% if ")
 		f.expr(n.Condition)
-		io.WriteString(f.w, " %}\n")
+		io.WriteString(f.w, " %}")
 		f.blocks(n.Consequence)
 		for _, elseIfClause := range n.ElseIfs {
-			io.WriteString(f.w, "{% else if ")
+			io.WriteString(f.w, "{% elseif ")
 			f.expr(elseIfClause.Condition)
-			io.WriteString(f.w, " %}\n")
+			io.WriteString(f.w, " %}")
 			f.blocks(elseIfClause.Consequence)
 		}
 		if n.Else != nil {
-			io.WriteString(f.w, "{% else %}\n")
+			io.WriteString(f.w, "{% else %}")
 			f.blocks(n.Else.Consequence)
 		}
-		io.WriteString(f.w, "{% end %}\n")
+		io.WriteString(f.w, "{% end %}")
 
 	default:
 		panic(fmt.Sprintf("format: unexpected block type %T", b))

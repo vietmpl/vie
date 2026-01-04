@@ -71,19 +71,6 @@ func (p *parser) parseBlock() (ast.Block, error) {
 		b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
 		b = bytes.ReplaceAll(b, []byte("\r"), []byte("\n"))
 
-		// TODO(skewb1k): factor out to parser.Peek().
-		if p.GotoNextSibling() {
-			// Trim trail spaces and tabs up to and including the first newline
-			// if the previous node is a tag. 'text' nodes cannot follow
-			// another 'text', so the next node must be a tag.
-			if p.Node().Kind() != "render" && p.Node().Kind() != "comment_tag" {
-				b = bytes.TrimRight(b, " \t")
-				if len(b) > 0 && b[len(b)-1] != '\n' {
-					b = append(b, '\n')
-				}
-			}
-			p.GotoPreviousSibling()
-		}
 		if len(b) == 0 {
 			return nil, nil
 		}
@@ -141,13 +128,12 @@ func (p *parser) parseBlock() (ast.Block, error) {
 
 		for p.GotoNextSibling() {
 			switch p.Node().Kind() {
-			case "else_if_tag":
+			case "elseif_tag":
 				var elseIf ast.ElseIfClause
 				p.GotoFirstChild()
 
 				p.GotoNextSibling() // '{%'
-				p.GotoNextSibling() // 'else'
-				p.GotoNextSibling() // 'if'
+				p.GotoNextSibling() // 'elseif'
 				condition, err := p.parseExpr()
 				if err != nil {
 					return nil, err
@@ -157,7 +143,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 
 				for p.GotoNextSibling() {
 					kind := p.Node().Kind()
-					if kind == "else_if_tag" || kind == "else_tag" || kind == "end_tag" {
+					if kind == "elseif_tag" || kind == "else_tag" || kind == "end_tag" {
 						p.GotoPreviousSibling()
 						break
 					}
@@ -216,7 +202,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 
 		return nil, fmt.Errorf("expected {%% end %%}, found EOF")
 
-	case "end_tag", "else_if_tag", "else_tag":
+	case "end_tag", "elseif_tag", "else_tag":
 		return nil, fmt.Errorf("unexpected %s", strings.TrimSpace(p.nodeContent(n)))
 
 	default:
