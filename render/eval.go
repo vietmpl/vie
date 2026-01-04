@@ -26,57 +26,31 @@ func (r renderer) evalExpr(expr ast.Expr) value.Value {
 		x := r.evalExpr(e.X)
 		y := r.evalExpr(e.Y)
 		switch e.Op {
-		case ast.BinOpKindConcat:
+		case ast.CONCAT:
 			xx := x.(value.String)
 			yy := y.(value.String)
 			return xx.Concat(yy)
 
-		case ast.BinOpKindEq,
-			ast.BinOpKindIs:
+		case ast.EQUAL:
 			return value.Eq(x, y)
 
-		case ast.BinOpKindNeq,
-			ast.BinOpKindIsNot:
+		case ast.NOT_EQUAL:
 			return value.Neq(x, y)
 
-		case ast.BinOpKindGtr,
-			ast.BinOpKindGeq,
-			ast.BinOpKindLss,
-			ast.BinOpKindLeq,
-			ast.BinOpKindLAnd,
-			ast.BinOpKindLOr,
-			ast.BinOpKindAnd,
-			ast.BinOpKindOr:
-
+		case ast.AND:
+			// TODO: validate values.
 			xx := x.(value.Bool)
 			yy := y.(value.Bool)
+			return xx.And(yy)
 
-			switch e.Op {
-			case ast.BinOpKindGtr:
-				return xx.Gtr(yy)
+		case ast.OR:
+			// TODO: validate values.
+			xx := x.(value.Bool)
+			yy := y.(value.Bool)
+			return xx.Or(yy)
 
-			case ast.BinOpKindGeq:
-				return xx.Geq(yy)
-
-			case ast.BinOpKindLss:
-				return xx.Lss(yy)
-
-			case ast.BinOpKindLeq:
-				return xx.Leq(yy)
-
-			case ast.BinOpKindLAnd,
-				ast.BinOpKindAnd:
-				return xx.And(yy)
-
-			case ast.BinOpKindLOr,
-				ast.BinOpKindOr:
-				return xx.Or(yy)
-
-			default:
-				panic("unreachable")
-			}
 		default:
-			panic(fmt.Sprintf("render: unexpected BinOpKind: %T", e.Op))
+			panic(fmt.Sprintf("render: unexpected binary operator: %T", e.Op))
 		}
 
 	case *ast.ParenExpr:

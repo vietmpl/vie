@@ -1,6 +1,3 @@
 {{ !flag }}
 {{ !true }}
 {{ !!"str" }}
-{{ not true }}
-{{ not "str" }}
-{{ not value }}

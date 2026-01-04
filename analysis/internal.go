@@ -140,7 +140,7 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 
 	case *ast.BinaryExpr:
 		switch e.Op {
-		case ast.BinOpKindConcat:
+		case ast.CONCAT:
 			x := a.checkExpr(c, e.X)
 			y := a.checkExpr(c, e.Y)
 			if x == nil || y == nil {
@@ -161,12 +161,7 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 			})
 			return value.TypeString
 
-		case
-			ast.BinOpKindEq,
-			ast.BinOpKindNeq,
-			ast.BinOpKindIs,
-			ast.BinOpKindIsNot:
-
+		case ast.EQUAL, ast.NOT_EQUAL:
 			x := a.checkExpr(c, e.X)
 			y := a.checkExpr(c, e.Y)
 			if x == nil || y == nil {
@@ -218,15 +213,7 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 			}
 			return value.TypeBool
 
-		case ast.BinOpKindGtr,
-			ast.BinOpKindGeq,
-			ast.BinOpKindLss,
-			ast.BinOpKindLeq,
-			ast.BinOpKindLAnd,
-			ast.BinOpKindLOr,
-			ast.BinOpKindAnd,
-			ast.BinOpKindOr:
-
+		case ast.AND, ast.OR:
 			x := a.checkExpr(c, e.X)
 			y := a.checkExpr(c, e.Y)
 			if x == nil || y == nil {
@@ -248,7 +235,7 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 			return value.TypeBool
 
 		default:
-			panic(fmt.Sprintf("analyzer: unexpected BinOpKind: %T", expr))
+			panic(fmt.Sprintf("analyzer: unexpected binary operator: %T", expr))
 		}
 
 	case *ast.ParenExpr:

@@ -283,7 +283,7 @@ func (p *parser) parseExpr() ast.Expr {
 
 		nn := p.Node()
 		unary.OpPos = posFromTsPoint(nn.StartPosition())
-		unary.Op = ast.ParseUnOpKind(string(p.nodeContent(nn)))
+		unary.Op = ast.ParseUnaryOperator(p.nodeContent(nn))
 
 		p.GotoNextSibling()
 		unary.X = p.parseExpr()
@@ -298,7 +298,7 @@ func (p *parser) parseExpr() ast.Expr {
 		binary.X = p.parseExpr()
 
 		p.GotoNextSibling()
-		binary.Op = ast.ParseBinOpKind(string(p.nodeContent(p.Node())))
+		binary.Op = ast.ParseBinaryOperator(p.nodeContent(p.Node()))
 
 		p.GotoNextSibling()
 		binary.Y = p.parseExpr()

@@ -111,15 +111,15 @@ type (
 	}
 
 	UnaryExpr struct {
-		OpPos Pos      // position of Op
-		Op    UnOpKind // operator
-		X     Expr     // operand
+		OpPos Pos           // position of Op
+		Op    UnaryOperator // operator
+		X     Expr          // operand
 	}
 
 	BinaryExpr struct {
-		X  Expr      // left operand
-		Op BinOpKind // operator
-		Y  Expr      // right operand
+		X  Expr           // left operand
+		Op BinaryOperator // operator
+		Y  Expr           // right operand
 	}
 
 	ParenExpr struct {

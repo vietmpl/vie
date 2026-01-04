@@ -44,25 +44,10 @@ func FromBasicLit(l *ast.BasicLit) Value {
 
 func (x String) Eq(y String) Bool       { return x == y }
 func (x String) Neq(y String) Bool      { return x != y }
-func (x String) Gtr(y String) Bool      { return x > y }
-func (x String) Geq(y String) Bool      { return x >= y }
-func (x String) Lss(y String) Bool      { return x < y }
-func (x String) Leq(y String) Bool      { return x <= y }
 func (x String) Concat(y String) String { return x + y }
 
 func (x Bool) Eq(y Bool) Bool  { return x == y }
 func (x Bool) Neq(y Bool) Bool { return x != y }
-
-func (x Bool) toInt() int {
-	if x {
-		return 1
-	}
-	return 0
-}
-func (x Bool) Gtr(y Bool) Bool { return x.toInt() > y.toInt() }
-func (x Bool) Geq(y Bool) Bool { return x.toInt() >= y.toInt() }
-func (x Bool) Lss(y Bool) Bool { return x.toInt() < y.toInt() }
-func (x Bool) Leq(y Bool) Bool { return x.toInt() <= y.toInt() }
 
 func (x Bool) And(y Bool) Bool { return x && y }
 func (x Bool) Or(y Bool) Bool  { return x || y }

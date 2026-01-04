@@ -65,10 +65,6 @@ func (f *formatter) expr(e ast.Expr) {
 
 	case *ast.UnaryExpr:
 		io.WriteString(f.w, n.Op.String())
-		// do not insert whitespace after '!'
-		if n.Op != ast.UnOpKindExcl {
-			io.WriteString(f.w, " ")
-		}
 		f.expr(n.X)
 
 	case *ast.BinaryExpr:
