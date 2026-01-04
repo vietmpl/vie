@@ -1,5 +1,0 @@
-TOP
-{% switch "" %}
-{% case '' extra %}
-{% end %}
-BOT

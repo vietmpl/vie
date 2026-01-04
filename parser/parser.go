@@ -232,77 +232,7 @@ func (p *parser) parseBlock() ast.Block {
 			"expected {% end %}, found EOF",
 		)
 
-	case "switch_tag":
-		bad := false
-		var switchBlock ast.SwitchBlock
-		p.GotoFirstChild()
-
-		p.GotoNextSibling() // '{%'
-		p.GotoNextSibling() // 'switch'
-		switchBlock.Value = p.parseExpr()
-		p.GotoParent()
-
-		for p.GotoNextSibling() {
-			switch p.Node().Kind() {
-			case "case_tag":
-				var caseClause ast.CaseClause
-				p.GotoFirstChild()
-
-				p.GotoNextSibling() // '{%'
-				p.GotoNextSibling() // 'case'
-				nn := p.Node()
-				if nn.IsError() {
-					from := posFromTsPoint(nn.StartPosition())
-					p.errors.Add(from, fmt.Sprintf("expected expression, found %s", p.nodeContent(nn)))
-					caseClause.List = []ast.Expr{
-						&ast.BadExpr{
-							From: from,
-							To:   posFromTsPoint(nn.EndPosition()),
-						},
-					}
-				} else {
-					caseClause.List = p.parseExprList()
-				}
-				p.GotoParent()
-
-				for p.GotoNextSibling() {
-					k := p.Node().Kind()
-					if k == "case_tag" || k == "end_tag" {
-						p.GotoPreviousSibling()
-						break
-					}
-					block := p.parseBlock()
-					if block != nil {
-						caseClause.Body = append(caseClause.Body, block)
-					}
-				}
-				switchBlock.Cases = append(switchBlock.Cases, caseClause)
-
-			case "end_tag":
-				if bad {
-					return &ast.BadBlock{
-						From: posFromTsPoint(n.StartPosition()),
-						To:   posFromTsPoint(p.Node().EndPosition()),
-					}
-				}
-				return &switchBlock
-
-			case "text":
-				// TODO(skewb1k): allow only whitespaces.
-
-			default:
-				bad = true
-			}
-		}
-		// TODO(skewb1k): restore TSCursor to the last valid node rather than
-		// advancing to EOF when an end_tag is missing.
-		return p.addBadBlockAndError(
-			n.StartPosition(),
-			p.Node().EndPosition(),
-			"expected {% end %}, found EOF",
-		)
-
-	case "end_tag", "else_if_tag", "else_tag", "case_tag":
+	case "end_tag", "else_if_tag", "else_tag":
 		return p.addBadBlockAndError(
 			n.StartPosition(),
 			n.EndPosition(),

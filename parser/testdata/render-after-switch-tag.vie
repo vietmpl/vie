@@ -1,5 +1,0 @@
-TOP
-{% switch "" %}
-{{ name }}
-{% end %}
-BOT

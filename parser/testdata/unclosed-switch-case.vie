@@ -1,4 +1,0 @@
-TOP
-{% switch "" %}
-{% case "" %}
-BOT

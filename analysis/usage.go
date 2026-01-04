@@ -9,7 +9,6 @@ type usageKind uint8
 
 const (
 	UsageKindRender usageKind = iota
-	UsageKindSwitch
 	UsageKindIf
 	UsageKindBinOp
 	UsageKindUnOp

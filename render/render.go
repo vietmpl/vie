@@ -65,20 +65,6 @@ func (r *renderer) renderBlock(block ast.Block) {
 			}
 		}
 
-	case *ast.SwitchBlock:
-		val := r.evalExpr(b.Value)
-
-		for _, c := range b.Cases {
-			for _, e := range c.List {
-				x := r.evalExpr(e)
-				if value.Eq(x, val) {
-					r.renderBlocks(c.Body)
-					return
-				}
-			}
-		}
-		panic("unreachable")
-
 	default:
 		panic(fmt.Sprintf("render: unexpected block type %T", block))
 	}

@@ -98,8 +98,6 @@ func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
 			a.checkBlocks(c, b.Else.Cons)
 		}
 
-		// case *ast.SwitchBlock:
-
 	default:
 		panic(fmt.Sprintf("analyzer: unexpected block type %T", block))
 	}

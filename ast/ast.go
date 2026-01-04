@@ -60,11 +60,6 @@ type (
 		ElseIfs []ElseIfClause
 		Else    *ElseClause
 	}
-
-	SwitchBlock struct {
-		Value Expr
-		Cases []CaseClause
-	}
 )
 
 func (*BadBlock) blockNode()     {}
@@ -72,7 +67,6 @@ func (*TextBlock) blockNode()    {}
 func (*CommentBlock) blockNode() {}
 func (*RenderBlock) blockNode()  {}
 func (*IfBlock) blockNode()      {}
-func (*SwitchBlock) blockNode()  {}
 
 // Clauses are part of a larger statement but does not implement [Block] itself.
 type (
@@ -85,12 +79,6 @@ type (
 	// ElseClause represents a final `else` branch inside an [IfBlock].
 	ElseClause struct {
 		Cons []Block
-	}
-
-	// CaseClause represents a single `case` branch inside a [SwitchBlock].
-	CaseClause struct {
-		List []Expr
-		Body []Block
 	}
 )
 
@@ -174,7 +162,6 @@ func (*TextBlock) node()    {}
 func (*CommentBlock) node() {}
 func (*RenderBlock) node()  {}
 func (*IfBlock) node()      {}
-func (*SwitchBlock) node()  {}
 func (*BasicLit) node()     {}
 func (*Ident) node()        {}
 func (*UnaryExpr) node()    {}

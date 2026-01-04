@@ -50,18 +50,6 @@ func (f *formatter) block(b ast.Block) {
 		}
 		io.WriteString(f.w, "{% end %}\n")
 
-	case *ast.SwitchBlock:
-		io.WriteString(f.w, "{% switch ")
-		f.expr(n.Value)
-		io.WriteString(f.w, " %}\n")
-		for _, c := range n.Cases {
-			io.WriteString(f.w, "{% case ")
-			f.exprList(c.List)
-			io.WriteString(f.w, " %}\n")
-			f.blocks(c.Body)
-		}
-		io.WriteString(f.w, "{% end %}\n")
-
 	default:
 		panic(fmt.Sprintf("format: unexpected block type %T", b))
 	}
