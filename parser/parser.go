@@ -466,6 +466,7 @@ func posFromTsPoint(point ts.Point) ast.Pos {
 		Character: point.Column,
 	}
 }
+
 func (p *parser) addBadBlockAndError(from ts.Point, to ts.Point, msg string) *ast.BadBlock {
 	f := posFromTsPoint(from)
 	p.errors.Add(f, msg)
