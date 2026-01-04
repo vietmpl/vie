@@ -16,8 +16,7 @@ var vieLanguage = ts.NewLanguage(tree_sitter_vie.Language())
 type parser struct {
 	*ts.TreeCursor
 
-	src    []byte
-	errors ErrorList
+	src []byte
 }
 
 func ParseBytes(src []byte) (*ast.Template, error) {
@@ -44,7 +43,10 @@ func ParseBytes(src []byte) (*ast.Template, error) {
 	defer p.GotoParent()
 
 	for {
-		block := p.parseBlock()
+		block, err := p.parseBlock()
+		if err != nil {
+			return nil, err
+		}
 		if block != nil {
 			template.Blocks = append(template.Blocks, block)
 		}
@@ -52,22 +54,13 @@ func ParseBytes(src []byte) (*ast.Template, error) {
 			break
 		}
 	}
-	var err error
-	if p.errors.Len() > 0 {
-		err = p.errors
-	}
-	return &template, err
+	return &template, nil
 }
 
-func (p *parser) parseBlock() ast.Block {
+func (p *parser) parseBlock() (ast.Block, error) {
 	n := p.Node()
 	if n.IsError() {
-		from := posFromTsPoint(n.StartPosition())
-		p.errors.Add(from, "invalid statement")
-		return &ast.BadBlock{
-			From: from,
-			To:   posFromTsPoint(n.EndPosition()),
-		}
+		return nil, fmt.Errorf("invalid block")
 	}
 	// TODO(skewb1k): use KindId instead of string comparisons.
 	switch n.Kind() {
@@ -92,11 +85,11 @@ func (p *parser) parseBlock() ast.Block {
 			p.GotoPreviousSibling()
 		}
 		if len(b) == 0 {
-			return nil
+			return nil, nil
 		}
 		return &ast.TextBlock{
 			Content: string(b),
-		}
+		}, nil
 
 	case "comment_tag":
 		var comment ast.CommentBlock
@@ -107,16 +100,12 @@ func (p *parser) parseBlock() ast.Block {
 		// handle `{##}`
 		commentNode := p.Node()
 		if commentNode.IsError() {
-			return p.addBadBlockAndError(
-				n.StartPosition(),
-				commentNode.EndPosition(),
-				"comments cannot contain line breaks",
-			)
+			return nil, fmt.Errorf("comments cannot contain line breaks")
 		}
 		if commentNode.Kind() == "comment" {
 			comment.Content = p.nodeContent(p.Node())
 		}
-		return &comment
+		return &comment, nil
 
 	case "render":
 		var displayBlock ast.DisplayBlock
@@ -124,30 +113,30 @@ func (p *parser) parseBlock() ast.Block {
 		defer p.GotoParent()
 
 		p.GotoNextSibling() // '{{'
-		from := p.Node().StartPosition()
-		displayBlock.Value = p.parseExpr()
+		value, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		displayBlock.Value = value
 		p.GotoNextSibling() // '<expr>'
 		// handle `{{ "" "" }}`
 		nn := p.Node()
 		if nn.IsError() {
-			msg := fmt.Sprintf("unexpected %s in display statement", p.nodeContent(nn))
-			p.errors.Add(posFromTsPoint(nn.StartPosition()), msg)
-			displayBlock.Value = &ast.BadExpr{
-				From: posFromTsPoint(from),
-				// TODO(skewb1k): include all nodes left.
-				To: posFromTsPoint(nn.EndPosition()),
-			}
+			return nil, fmt.Errorf("unexpected %s in display statement", p.nodeContent(nn))
 		}
-		return &displayBlock
+		return &displayBlock, nil
 
 	case "if_tag":
-		bad := false
 		var ifBlock ast.IfBlock
 		p.GotoFirstChild()
 
 		p.GotoNextSibling() // '{%'
 		p.GotoNextSibling() // 'if'
-		ifBlock.Condition = p.parseExpr()
+		condition, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		ifBlock.Condition = condition
 		p.GotoParent()
 
 		for p.GotoNextSibling() {
@@ -159,7 +148,11 @@ func (p *parser) parseBlock() ast.Block {
 				p.GotoNextSibling() // '{%'
 				p.GotoNextSibling() // 'else'
 				p.GotoNextSibling() // 'if'
-				elseIf.Condition = p.parseExpr()
+				condition, err := p.parseExpr()
+				if err != nil {
+					return nil, err
+				}
+				elseIf.Condition = condition
 				p.GotoParent()
 
 				for p.GotoNextSibling() {
@@ -168,7 +161,10 @@ func (p *parser) parseBlock() ast.Block {
 						p.GotoPreviousSibling()
 						break
 					}
-					block := p.parseBlock()
+					block, err := p.parseBlock()
+					if err != nil {
+						return nil, err
+					}
 					if block != nil {
 						elseIf.Consequence = append(elseIf.Consequence, block)
 					}
@@ -185,14 +181,7 @@ func (p *parser) parseBlock() ast.Block {
 				nn := p.Node()
 				if nn.IsError() {
 					content := p.nodeContent(nn)
-					var msg string
-					if content == "if" {
-						msg = "missing condition in else if statement"
-					} else {
-						msg = fmt.Sprintf("unexpected %q after else", content)
-					}
-					p.errors.Add(posFromTsPoint(n.StartPosition()), msg)
-					bad = true
+					return nil, fmt.Errorf("unexpected %q after else", content)
 				}
 				p.GotoParent()
 
@@ -201,7 +190,10 @@ func (p *parser) parseBlock() ast.Block {
 						p.GotoPreviousSibling()
 						break
 					}
-					block := p.parseBlock()
+					block, err := p.parseBlock()
+					if err != nil {
+						return nil, err
+					}
 					if block != nil {
 						elseClause.Consequence = append(elseClause.Consequence, block)
 					}
@@ -209,51 +201,33 @@ func (p *parser) parseBlock() ast.Block {
 				ifBlock.Else = &elseClause
 
 			case "end_tag":
-				if bad {
-					return &ast.BadBlock{
-						From: posFromTsPoint(n.StartPosition()),
-						To:   posFromTsPoint(p.Node().EndPosition()),
-					}
-				}
-				return &ifBlock
+				return &ifBlock, nil
 
 			default:
-				block := p.parseBlock()
+				block, err := p.parseBlock()
+				if err != nil {
+					return nil, err
+				}
 				if block != nil {
 					ifBlock.Consequence = append(ifBlock.Consequence, block)
 				}
 			}
 		}
-		// TODO(skewb1k): restore TSCursor to the last valid node rather than
-		// advancing to EOF when an end_tag is missing.
-		return p.addBadBlockAndError(
-			n.StartPosition(),
-			p.Node().EndPosition(),
-			"expected {% end %}, found EOF",
-		)
+
+		return nil, fmt.Errorf("expected {%% end %%}, found EOF")
 
 	case "end_tag", "else_if_tag", "else_tag":
-		return p.addBadBlockAndError(
-			n.StartPosition(),
-			n.EndPosition(),
-			// tag nodes may contain trailing \n.
-			fmt.Sprintf("unexpected %s", strings.TrimSpace(p.nodeContent(n))),
-		)
+		return nil, fmt.Errorf("unexpected %s", strings.TrimSpace(p.nodeContent(n)))
 
 	default:
 		panic(fmt.Sprintf("parser: unexpected block kind %q while parsing %s", n.Kind(), p.src))
 	}
 }
 
-func (p *parser) parseExpr() ast.Expr {
+func (p *parser) parseExpr() (ast.Expr, error) {
 	n := p.Node()
 	if n.IsError() || n.IsMissing() {
-		from := posFromTsPoint(n.StartPosition())
-		p.errors.Add(from, fmt.Sprintf("expected expression, found %s", p.nodeContent(n)))
-		return &ast.BadExpr{
-			From: from,
-			To:   posFromTsPoint(n.EndPosition()),
-		}
+		return nil, fmt.Errorf("expected expression, found %s", p.nodeContent(n))
 	}
 	switch n.Kind() {
 	case "string_literal":
@@ -261,20 +235,20 @@ func (p *parser) parseExpr() ast.Expr {
 			Start_: posFromTsPoint(n.StartPosition()),
 			Kind:   ast.KindString,
 			Value:  p.nodeContent(n),
-		}
+		}, nil
 
 	case "boolean_literal":
 		return &ast.BasicLiteral{
 			Start_: posFromTsPoint(n.StartPosition()),
 			Kind:   ast.KindBool,
 			Value:  p.nodeContent(n),
-		}
+		}, nil
 
 	case "identifier":
 		return &ast.Identifier{
 			Start_: posFromTsPoint(n.StartPosition()),
 			Value:  p.nodeContent(n),
-		}
+		}, nil
 
 	case "unary_expression":
 		p.GotoFirstChild()
@@ -286,24 +260,35 @@ func (p *parser) parseExpr() ast.Expr {
 		unary.Operator = ast.ParseUnaryOperator(p.nodeContent(nn))
 
 		p.GotoNextSibling()
-		unary.Operand = p.parseExpr()
-
-		return &unary
+		operand, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		unary.Operand = operand
+		return &unary, nil
 
 	case "binary_expression":
 		p.GotoFirstChild()
 		defer p.GotoParent()
 		var binary ast.BinaryExpr
 
-		binary.LOperand = p.parseExpr()
+		lOperand, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		binary.LOperand = lOperand
 
 		p.GotoNextSibling()
 		binary.Operator = ast.ParseBinaryOperator(p.nodeContent(p.Node()))
 
 		p.GotoNextSibling()
-		binary.ROperand = p.parseExpr()
+		rOperand, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		binary.ROperand = rOperand
 
-		return &binary
+		return &binary, nil
 
 	case "call_expression":
 		p.GotoFirstChild()
@@ -316,33 +301,35 @@ func (p *parser) parseExpr() ast.Expr {
 			Value:  p.nodeContent(nn),
 		}
 		p.GotoNextSibling()
+		arguments, err := p.parseExprList()
+		if err != nil {
+			return nil, err
+		}
+		call.Arguments = arguments
 
-		call.Arguments = p.parseExprList()
-		return &call
+		return &call, nil
 
 	case "pipe_expression":
 		p.GotoFirstChild()
 		defer p.GotoParent()
 		var pipe ast.PipeExpr
 
-		pipe.Argument = p.parseExpr()
+		argument, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		pipe.Argument = argument
 		p.GotoNextSibling() // <expr>
 
 		p.GotoNextSibling() // '|'
 
 		nn := p.Node()
 		if nn.IsError() || nn.IsMissing() {
-			from := posFromTsPoint(n.StartPosition())
-			p.errors.Add(from, fmt.Sprintf("expected expression, found %s", p.nodeContent(n)))
-			return &ast.BadExpr{
-				From: from,
-				To:   posFromTsPoint(nn.EndPosition()),
-			}
+			return nil, fmt.Errorf("expected expression, found %s", p.nodeContent(n))
 		}
+		pipe.Function = ast.Identifier{Value: p.nodeContent(nn)}
 
-		pipe.Function = ast.Identifier{Value: p.nodeContent(p.Node())}
-
-		return &pipe
+		return &pipe, nil
 
 	case "parenthesized_expression":
 		p.GotoFirstChild()
@@ -352,38 +339,36 @@ func (p *parser) parseExpr() ast.Expr {
 		paren.LparenLocation = posFromTsPoint(p.Node().StartPosition())
 		p.GotoNextSibling()
 
-		paren.Value = p.parseExpr()
-		return &paren
-
-	// case "render","end_tag", "else_if_tag", "else_tag", "case_tag":
-
-	// TODO(skewb1k): ideally, we should panic when encountering an
-	// unrecognized TSKind, instead of silently producing a placeholder.
-	default:
-		from := posFromTsPoint(n.StartPosition())
-		p.errors.Add(from, fmt.Sprintf("expected expression, found %s", p.nodeContent(n)))
-		return &ast.BadExpr{
-			From: from,
-			To:   posFromTsPoint(n.EndPosition()),
+		value, err := p.parseExpr()
+		if err != nil {
+			return nil, err
 		}
-		// panic(fmt.Sprintf("parser: unexpected expr kind %q while parsing %s", n.Kind(), p.src))
+		paren.Value = value
+		return &paren, nil
+
+	default:
+		return nil, fmt.Errorf("expected expression, found %s", p.nodeContent(n))
 	}
 }
 
-func (p *parser) parseExprList() []ast.Expr {
+func (p *parser) parseExprList() ([]ast.Expr, error) {
 	p.GotoFirstChild()
 	defer p.GotoParent()
 
 	var list []ast.Expr
 	for {
 		if p.Node().IsNamed() {
-			list = append(list, p.parseExpr())
+			expr, err := p.parseExpr()
+			if err != nil {
+				return nil, err
+			}
+			list = append(list, expr)
 		}
 		if !p.GotoNextSibling() {
 			break
 		}
 	}
-	return list
+	return list, nil
 }
 
 func (p *parser) nodeContent(n *ts.Node) string {
@@ -395,14 +380,4 @@ func posFromTsPoint(point ts.Point) ast.Location {
 		Line:   point.Row,
 		Column: point.Column,
 	}
-}
-
-func (p *parser) addBadBlockAndError(from ts.Point, to ts.Point, msg string) *ast.BadBlock {
-	f := posFromTsPoint(from)
-	p.errors.Add(f, msg)
-	return &ast.BadBlock{
-		From: f,
-		To:   posFromTsPoint(to),
-	}
-
 }

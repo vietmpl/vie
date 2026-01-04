@@ -32,13 +32,6 @@ type Expr interface {
 // Blocks ----------------------------------------
 
 type (
-	// A BadBlock node is a placeholder for statements containing
-	// syntax errors for which no correct statement nodes can be
-	// created.
-	BadBlock struct {
-		From, To Location // position range of bad statement
-	}
-
 	TextBlock struct {
 		Content string
 	}
@@ -59,7 +52,6 @@ type (
 	}
 )
 
-func (*BadBlock) blockNode()     {}
 func (*TextBlock) blockNode()    {}
 func (*CommentBlock) blockNode() {}
 func (*DisplayBlock) blockNode() {}
@@ -89,13 +81,6 @@ const (
 )
 
 type (
-	// A BadExpr node is a placeholder for an expression containing
-	// syntax errors for which a correct expression node cannot be
-	// created.
-	BadExpr struct {
-		From, To Location // position range of bad expression
-	}
-
 	BasicLiteral struct {
 		Start_ Location
 		Kind   BasicLitKind
@@ -135,7 +120,6 @@ type (
 	}
 )
 
-func (*BadExpr) exprNode()      {}
 func (*BasicLiteral) exprNode() {}
 func (*Identifier) exprNode()   {}
 func (*UnaryExpr) exprNode()    {}
@@ -144,7 +128,6 @@ func (*ParenExpr) exprNode()    {}
 func (*CallExpr) exprNode()     {}
 func (*PipeExpr) exprNode()     {}
 
-func (x *BadExpr) Start() Location      { return x.From }
 func (x *BasicLiteral) Start() Location { return x.Start_ }
 func (x *Identifier) Start() Location   { return x.Start_ }
 func (x *UnaryExpr) Start() Location    { return x.OperatorLocation }
@@ -153,8 +136,6 @@ func (x *ParenExpr) Start() Location    { return x.LparenLocation }
 func (x *CallExpr) Start() Location     { return x.Function.Start() }
 func (x *PipeExpr) Start() Location     { return x.Argument.Start() }
 
-func (*BadExpr) node()      {}
-func (*BadBlock) node()     {}
 func (*TextBlock) node()    {}
 func (*CommentBlock) node() {}
 func (*DisplayBlock) node() {}
