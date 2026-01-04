@@ -1,5 +1,0 @@
-{% if flag %}
-1
-{% else if flag %}
-2
-{% end %}
