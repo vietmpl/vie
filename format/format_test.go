@@ -23,11 +23,35 @@ var stableTests = [...]struct {
 		"a{{ id }}b",
 	},
 	{
+		"pipe",
+		"{{ foo | bar }}",
+	},
+	{
+		"binary operators",
+		"{{ a ~ b or c == d and e != g }}",
+	},
+	{
+		"unary operators",
+		"{{ !a }}",
+	},
+	{
+		"parens",
+		"{{ ((a)) }}",
+	},
+	{
 		"inline comment",
 		"a{# comment #}b",
 	},
 	{
 		"empty comment",
+		"{##}",
+	},
+	// {
+	// 	"multiline comment",
+	// 	"{# 1\n2\n3#}",
+	// },
+	{
+		"single space comment",
 		"{# #}",
 	},
 	{
@@ -36,11 +60,15 @@ var stableTests = [...]struct {
 	},
 	{
 		"inline if",
-		"a{% if true %}b{% elseif false %}{% else %}{% end %}c",
+		"{% if a %}b{% elseif b %}{% else %}{% end %}",
+	},
+	{
+		"multiple elseif's",
+		"{% if a %}\n{% elseif b %}\n{% elseif c %}\n{% else %}\n{% end %}",
 	},
 	{
 		"trailing whitespace",
-		"a\n{% if true %}  \nb\n{% end %} \nc",
+		"\n{% if true %} \n\n{% end %}\n",
 	},
 }
 
@@ -50,9 +78,14 @@ var transformTests = [...]struct {
 	expected_source string
 }{
 	{
-		"spaces inside display",
+		"adds spaces around display",
 		"{{name}}",
 		"{{ name }}",
+	},
+	{
+		"fix spaces around statements",
+		"{% 	if name  %}{%  end   %}",
+		"{% if name %}{% end %}",
 	},
 }
 
