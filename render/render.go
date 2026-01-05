@@ -46,23 +46,16 @@ func (r *renderer) renderBlock(block ast.Block) {
 		_, _ = io.WriteString(r.w, string(xv))
 
 	case *ast.IfBlock:
-		condVal := r.evalExpr(b.Condition)
-		cond := condVal.(value.Bool)
-
-		if cond {
-			r.renderBlocks(b.Consequence)
-		} else {
-			for _, elseIfClause := range b.ElseIfs {
-				elseCondVal := r.evalExpr(elseIfClause.Condition)
-				elseCond := elseCondVal.(value.Bool)
-				if elseCond {
-					r.renderBlocks(elseIfClause.Consequence)
-					break
-				}
+		for _, branch := range b.Branches {
+			conditionVal := r.evalExpr(branch.Condition)
+			// TODO(skewb1k): fixme.
+			if conditionVal.(value.Bool) {
+				r.renderBlocks(branch.Consequence)
+				break
 			}
-			if b.Else != nil {
-				r.renderBlocks(b.Else.Consequence)
-			}
+		}
+		if b.ElseConsequence != nil {
+			r.renderBlocks(*b.ElseConsequence)
 		}
 
 	default:

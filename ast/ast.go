@@ -45,10 +45,8 @@ type (
 	}
 
 	IfBlock struct {
-		Condition   Expr
-		Consequence []Block
-		ElseIfs     []ElseIfClause
-		Else        *ElseClause
+		Branches        []IfBranch
+		ElseConsequence *[]Block
 	}
 )
 
@@ -57,19 +55,10 @@ func (*CommentBlock) blockNode() {}
 func (*DisplayBlock) blockNode() {}
 func (*IfBlock) blockNode()      {}
 
-// Clauses are part of a larger block but does not implement [Block] itself.
-type (
-	// ElseIfClause represents an `else if` branch inside an [IfBlock].
-	ElseIfClause struct {
-		Condition   Expr
-		Consequence []Block
-	}
-
-	// ElseClause represents a final `else` branch inside an [IfBlock].
-	ElseClause struct {
-		Consequence []Block
-	}
-)
+type IfBranch struct {
+	Condition   Expr
+	Consequence []Block
+}
 
 // Expressions -----------------------------------
 

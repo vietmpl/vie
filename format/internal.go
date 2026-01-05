@@ -35,18 +35,19 @@ func (f *formatter) block(b ast.Block) {
 
 	case *ast.IfBlock:
 		io.WriteString(f.w, "{% if ")
-		f.expr(n.Condition)
+		branch0 := n.Branches[0]
+		f.expr(branch0.Condition)
 		io.WriteString(f.w, " %}")
-		f.blocks(n.Consequence)
-		for _, elseIfClause := range n.ElseIfs {
+		f.blocks(branch0.Consequence)
+		for _, branch := range n.Branches[1:] {
 			io.WriteString(f.w, "{% elseif ")
-			f.expr(elseIfClause.Condition)
+			f.expr(branch.Condition)
 			io.WriteString(f.w, " %}")
-			f.blocks(elseIfClause.Consequence)
+			f.blocks(branch.Consequence)
 		}
-		if n.Else != nil {
+		if n.ElseConsequence != nil {
 			io.WriteString(f.w, "{% else %}")
-			f.blocks(n.Else.Consequence)
+			f.blocks(*n.ElseConsequence)
 		}
 		io.WriteString(f.w, "{% end %}")
 

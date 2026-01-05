@@ -48,54 +48,32 @@ func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
 		}
 
 	case *ast.IfBlock:
-		cond := a.checkExpr(c, b.Condition)
-		switch condx := cond.(type) {
-		case nil:
-			return
-		case value.Type:
-			if condx != value.TypeBool {
-				a.addDiagnostic(WrongUsage{
-					WantType: value.TypeBool,
-					GotType:  condx,
-					Pos_:     b.Condition.Start(),
-					Path_:    c.path,
-				})
-			}
-		case TypeVar:
-			a.addUsage(condx.String(), Usage{
-				Type: value.TypeBool,
-				Kind: UsageKindIf,
-				Pos:  b.Condition.Start(),
-				Path: c.path,
-			})
-		}
-		a.checkBlocks(c, b.Consequence)
-		for _, elseIfClause := range b.ElseIfs {
-			elseIfCond := a.checkExpr(c, elseIfClause.Condition)
-			switch elseIfCondx := elseIfCond.(type) {
+		for _, branch := range b.Branches {
+			condition := a.checkExpr(c, branch.Condition)
+			switch conditionx := condition.(type) {
 			case nil:
 				return
 			case value.Type:
-				if elseIfCondx != value.TypeBool {
+				if conditionx != value.TypeBool {
 					a.addDiagnostic(WrongUsage{
 						WantType: value.TypeBool,
-						GotType:  elseIfCondx,
-						Pos_:     elseIfClause.Condition.Start(),
+						GotType:  conditionx,
+						Pos_:     branch.Condition.Start(),
 						Path_:    c.path,
 					})
 				}
 			case TypeVar:
-				a.addUsage(elseIfCondx.String(), Usage{
+				a.addUsage(conditionx.String(), Usage{
 					Type: value.TypeBool,
 					Kind: UsageKindIf,
-					Pos:  elseIfClause.Condition.Start(),
+					Pos:  branch.Condition.Start(),
 					Path: c.path,
 				})
 			}
-			a.checkBlocks(c, elseIfClause.Consequence)
+			a.checkBlocks(c, branch.Consequence)
 		}
-		if b.Else != nil {
-			a.checkBlocks(c, b.Else.Consequence)
+		if b.ElseConsequence != nil {
+			a.checkBlocks(c, *b.ElseConsequence)
 		}
 
 	default:

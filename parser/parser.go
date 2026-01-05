@@ -123,13 +123,15 @@ func (p *parser) parseBlock() (ast.Block, error) {
 		if err != nil {
 			return nil, err
 		}
-		ifBlock.Condition = condition
+		ifBlock.Branches = append(ifBlock.Branches, ast.IfBranch{
+			Condition: condition,
+		})
 		p.GotoParent()
 
 		for p.GotoNextSibling() {
 			switch p.Node().Kind() {
 			case "elseif_tag":
-				var elseIf ast.ElseIfClause
+				var elseIf ast.IfBranch
 				p.GotoFirstChild()
 
 				p.GotoNextSibling() // '{%'
@@ -155,10 +157,9 @@ func (p *parser) parseBlock() (ast.Block, error) {
 						elseIf.Consequence = append(elseIf.Consequence, block)
 					}
 				}
-				ifBlock.ElseIfs = append(ifBlock.ElseIfs, elseIf)
+				ifBlock.Branches = append(ifBlock.Branches, elseIf)
 
 			case "else_tag":
-				var elseClause ast.ElseClause
 				p.GotoFirstChild()
 
 				p.GotoNextSibling() // '{%'
@@ -171,6 +172,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 				}
 				p.GotoParent()
 
+				ifBlock.ElseConsequence = &[]ast.Block{}
 				for p.GotoNextSibling() {
 					if p.Node().Kind() == "end_tag" {
 						p.GotoPreviousSibling()
@@ -181,10 +183,9 @@ func (p *parser) parseBlock() (ast.Block, error) {
 						return nil, err
 					}
 					if block != nil {
-						elseClause.Consequence = append(elseClause.Consequence, block)
+						*ifBlock.ElseConsequence = append(*ifBlock.ElseConsequence, block)
 					}
 				}
-				ifBlock.Else = &elseClause
 
 			case "end_tag":
 				return &ifBlock, nil
@@ -195,7 +196,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 					return nil, err
 				}
 				if block != nil {
-					ifBlock.Consequence = append(ifBlock.Consequence, block)
+					ifBlock.Branches[0].Consequence = append(ifBlock.Branches[0].Consequence, block)
 				}
 			}
 		}
