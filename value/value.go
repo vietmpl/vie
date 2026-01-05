@@ -21,8 +21,6 @@ func (Bool) Type() Type { return TypeBool }
 
 func FromBasicLit(l *ast.BasicLiteral) Value {
 	switch l.Kind {
-	case ast.KindBool:
-		return Bool(l.Value == "true")
 	case ast.KindString:
 		// TODO(skewb1k): Replace this hack with a manual parser.
 		value, _ := strconv.Unquote(l.Value)

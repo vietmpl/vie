@@ -92,8 +92,6 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 	switch e := expr.(type) {
 	case *ast.BasicLiteral:
 		switch e.Kind {
-		case ast.KindBool:
-			return value.TypeBool
 		case ast.KindString:
 			return value.TypeString
 		default:

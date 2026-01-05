@@ -214,14 +214,7 @@ func (p *parser) parseExpr() (ast.Expr, error) {
 			Value:  n.Utf8Text(p.source),
 		}, nil
 
-	case "boolean_literal":
-		return &ast.BasicLiteral{
-			Start_: posFromTsPoint(n.StartPosition()),
-			Kind:   ast.KindBool,
-			Value:  n.Utf8Text(p.source),
-		}, nil
-
-	case "identifier":
+	case "identifier", "boolean_literal":
 		return &ast.Identifier{
 			Start_: posFromTsPoint(n.StartPosition()),
 			Value:  n.Utf8Text(p.source),

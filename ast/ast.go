@@ -69,8 +69,7 @@ type IfBranch struct {
 type BasicLitKind uint8
 
 const (
-	KindBool BasicLitKind = iota
-	KindString
+	KindString BasicLitKind = iota
 )
 
 type (
