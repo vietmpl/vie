@@ -1,5 +1,0 @@
-TOP
-{% if true %}
-{% else extra %}
-{% end %}
-BOT
