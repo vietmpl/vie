@@ -2,355 +2,316 @@ package parse
 
 import (
 	"fmt"
-	"strings"
-
-	ts "github.com/tree-sitter/go-tree-sitter"
-	"github.com/vietmpl/tree-sitter-vie/bindings/go"
 
 	"github.com/vietmpl/vie/ast"
+	"github.com/vietmpl/vie/lexer"
+	"github.com/vietmpl/vie/token"
 )
 
-var vieLanguage = ts.NewLanguage(tree_sitter_vie.Language())
-
 type parser struct {
-	*ts.TreeCursor
-
 	source []byte
+	index  int
+	tokens []lexer.Token
+}
+
+func (p *parser) peek() lexer.Token {
+	return p.tokens[p.index]
+}
+
+func (p *parser) next() lexer.Token {
+	tok := p.tokens[p.index]
+	p.index++
+	return tok
+}
+
+func (p *parser) tokenContent(tok lexer.Token) string {
+	return string(p.source[tok.Start:tok.End])
+}
+
+// TODO: consider returning token.
+func (p *parser) expectToken(kind token.Kind) error {
+	currentToken := p.next()
+	if currentToken.Kind != kind {
+		return fmt.Errorf("expected %s, got %s",
+			kind,
+			currentToken.Kind)
+	}
+	return nil
 }
 
 func Source(source []byte) (*ast.Template, error) {
-	tsParser := ts.NewParser()
-	_ = tsParser.SetLanguage(vieLanguage)
-	defer tsParser.Close()
-
-	tree := tsParser.Parse(source, nil)
-	defer tree.Close()
-
-	cursor := tree.Walk()
-	defer cursor.Close()
-
 	p := parser{
-		TreeCursor: cursor,
-		source:     source,
+		source: source,
 	}
-
-	var template ast.Template
-	if !p.GotoFirstChild() {
-		// the file is empty.
-		return &template, nil
-	}
-	defer p.GotoParent()
-
+	var l lexer.Lexer
+	l.Init(source)
 	for {
-		block, err := p.parseBlock()
-		if err != nil {
-			return nil, err
-		}
-		if block != nil {
-			template.Blocks = append(template.Blocks, block)
-		}
-		if !p.GotoNextSibling() {
+		tok := l.Next()
+		p.tokens = append(p.tokens, tok)
+		if tok.Kind == token.EOF {
 			break
 		}
 	}
-	return &template, nil
-}
 
-func (p *parser) parseBlock() (ast.Block, error) {
-	n := p.Node()
-	if n.IsError() {
-		return nil, fmt.Errorf("invalid block")
-	}
-	// TODO(skewb1k): use KindId instead of string comparisons.
-	switch n.Kind() {
-	case "text":
-		return &ast.TextBlock{
-			Content: n.Utf8Text(p.source),
-		}, nil
+	var blocks []ast.Block
+	var block ast.Block
+	var err error
 
-	case "comment_tag":
-		var comment ast.CommentBlock
-		p.GotoFirstChild()
-		defer p.GotoParent()
-
-		p.GotoNextSibling() // '{#'
-		// handle `{##}`
-		commentNode := p.Node()
-		if commentNode.IsError() {
-			return nil, fmt.Errorf("comments cannot contain line breaks")
-		}
-		if commentNode.Kind() == "comment" {
-			comment.Content = p.Node().Utf8Text(p.source)
-		}
-		return &comment, nil
-
-	case "display_tag":
-		var displayBlock ast.DisplayBlock
-		p.GotoFirstChild()
-		defer p.GotoParent()
-
-		p.GotoNextSibling() // '{{'
-		value, err := p.parseExpr()
-		if err != nil {
-			return nil, err
-		}
-		displayBlock.Value = value
-		p.GotoNextSibling() // '<expr>'
-		// handle `{{ "" "" }}`
-		nn := p.Node()
-		if nn.IsError() {
-			return nil, fmt.Errorf("unexpected %s in display statement", nn.Utf8Text(p.source))
-		}
-		return &displayBlock, nil
-
-	case "if_tag":
-		var ifBlock ast.IfBlock
-		p.GotoFirstChild()
-
-		p.GotoNextSibling() // '{%'
-		p.GotoNextSibling() // 'if'
-		condition, err := p.parseExpr()
-		if err != nil {
-			return nil, err
-		}
-		ifBlock.Branches = append(ifBlock.Branches, ast.IfBranch{
-			Condition: condition,
-		})
-		p.GotoParent()
-
-		for p.GotoNextSibling() {
-			switch p.Node().Kind() {
-			case "elseif_tag":
-				var elseIf ast.IfBranch
-				p.GotoFirstChild()
-
-				p.GotoNextSibling() // '{%'
-				p.GotoNextSibling() // 'elseif'
-				condition, err := p.parseExpr()
-				if err != nil {
-					return nil, err
-				}
-				elseIf.Condition = condition
-				p.GotoParent()
-
-				for p.GotoNextSibling() {
-					kind := p.Node().Kind()
-					if kind == "elseif_tag" || kind == "else_tag" || kind == "end_tag" {
-						p.GotoPreviousSibling()
-						break
-					}
-					block, err := p.parseBlock()
-					if err != nil {
-						return nil, err
-					}
-					if block != nil {
-						elseIf.Consequence = append(elseIf.Consequence, block)
-					}
-				}
-				ifBlock.Branches = append(ifBlock.Branches, elseIf)
-
-			case "else_tag":
-				p.GotoFirstChild()
-
-				p.GotoNextSibling() // '{%'
-				p.GotoNextSibling() // 'else'
-				// handle `{% else "" %}`
-				nn := p.Node()
-				if nn.IsError() {
-					content := nn.Utf8Text(p.source)
-					return nil, fmt.Errorf("unexpected %q after else", content)
-				}
-				p.GotoParent()
-
-				ifBlock.Alternative = &[]ast.Block{}
-				for p.GotoNextSibling() {
-					if p.Node().Kind() == "end_tag" {
-						p.GotoPreviousSibling()
-						break
-					}
-					block, err := p.parseBlock()
-					if err != nil {
-						return nil, err
-					}
-					if block != nil {
-						*ifBlock.Alternative = append(*ifBlock.Alternative, block)
-					}
-				}
-
-			case "end_tag":
-				return &ifBlock, nil
-
-			default:
-				block, err := p.parseBlock()
-				if err != nil {
-					return nil, err
-				}
-				if block != nil {
-					ifBlock.Branches[0].Consequence = append(ifBlock.Branches[0].Consequence, block)
-				}
-			}
-		}
-
-		return nil, fmt.Errorf("expected {%% end %%}, found EOF")
-
-	case "end_tag", "elseif_tag", "else_tag":
-		return nil, fmt.Errorf("unexpected %s", strings.TrimSpace(n.Utf8Text(p.source)))
-
-	default:
-		panic(fmt.Sprintf("parser: unexpected block kind %q while parsing %s", n.Kind(), p.source))
-	}
-}
-
-func (p *parser) parseExpr() (ast.Expr, error) {
-	n := p.Node()
-	if n.IsError() || n.IsMissing() {
-		return nil, fmt.Errorf("expected expression, found %s", n.Utf8Text(p.source))
-	}
-	switch n.Kind() {
-	case "string_literal":
-		return &ast.BasicLiteral{
-			Start_: posFromTsPoint(n.StartPosition()),
-			Kind:   ast.KindString,
-			Value:  n.Utf8Text(p.source),
-		}, nil
-
-	case "boolean_literal":
-		return &ast.BasicLiteral{
-			Start_: posFromTsPoint(n.StartPosition()),
-			Kind:   ast.KindBool,
-			Value:  n.Utf8Text(p.source),
-		}, nil
-
-	case "identifier":
-		return &ast.Identifier{
-			Start_: posFromTsPoint(n.StartPosition()),
-			Value:  n.Utf8Text(p.source),
-		}, nil
-
-	case "unary_expression":
-		p.GotoFirstChild()
-		defer p.GotoParent()
-		var unary ast.UnaryExpr
-
-		nn := p.Node()
-		unary.OperatorLocation = posFromTsPoint(nn.StartPosition())
-		unary.Operator = parseUnaryOperator(nn.Utf8Text(p.source))
-
-		p.GotoNextSibling()
-		operand, err := p.parseExpr()
-		if err != nil {
-			return nil, err
-		}
-		unary.Operand = operand
-		return &unary, nil
-
-	case "binary_expression":
-		p.GotoFirstChild()
-		defer p.GotoParent()
-		var binary ast.BinaryExpr
-
-		lOperand, err := p.parseExpr()
-		if err != nil {
-			return nil, err
-		}
-		binary.LOperand = lOperand
-
-		p.GotoNextSibling()
-		binary.Operator = parseBinaryOperator(p.Node().Utf8Text(p.source))
-
-		p.GotoNextSibling()
-		rOperand, err := p.parseExpr()
-		if err != nil {
-			return nil, err
-		}
-		binary.ROperand = rOperand
-
-		return &binary, nil
-
-	case "call_expression":
-		p.GotoFirstChild()
-		defer p.GotoParent()
-		var call ast.CallExpr
-
-		nn := p.Node()
-		call.Function = ast.Identifier{
-			Start_: posFromTsPoint(nn.StartPosition()),
-			Value:  nn.Utf8Text(p.source),
-		}
-		p.GotoNextSibling()
-		arguments, err := p.parseExprList()
-		if err != nil {
-			return nil, err
-		}
-		call.Arguments = arguments
-
-		return &call, nil
-
-	case "pipe_expression":
-		p.GotoFirstChild()
-		defer p.GotoParent()
-		var pipe ast.PipeExpr
-
-		argument, err := p.parseExpr()
-		if err != nil {
-			return nil, err
-		}
-		pipe.Argument = argument
-		p.GotoNextSibling() // <expr>
-
-		p.GotoNextSibling() // '|'
-
-		nn := p.Node()
-		if nn.IsError() || nn.IsMissing() {
-			return nil, fmt.Errorf("expected expression, found %s", n.Utf8Text(p.source))
-		}
-		pipe.Function = ast.Identifier{Value: nn.Utf8Text(p.source)}
-
-		return &pipe, nil
-
-	case "parenthesized_expression":
-		p.GotoFirstChild()
-		defer p.GotoParent()
-		var paren ast.ParenExpr
-
-		paren.LparenLocation = posFromTsPoint(p.Node().StartPosition())
-		p.GotoNextSibling()
-
-		value, err := p.parseExpr()
-		if err != nil {
-			return nil, err
-		}
-		paren.Value = value
-		return &paren, nil
-
-	default:
-		return nil, fmt.Errorf("expected expression, found %s", n.Utf8Text(p.source))
-	}
-}
-
-func (p *parser) parseExprList() ([]ast.Expr, error) {
-	p.GotoFirstChild()
-	defer p.GotoParent()
-
-	var list []ast.Expr
+loop:
 	for {
-		if p.Node().IsNamed() {
-			expr, err := p.parseExpr()
+		currentToken := p.next()
+		switch currentToken.Kind {
+		case token.EOF:
+			break loop
+		case token.TEXT:
+			block = p.parseTextBlock(currentToken)
+		case token.L_DOUBLE_BRACE:
+			block, err = p.parseDisplayBlock()
+		case token.L_BRACE_PERCENT:
+			block, err = p.parseStmt()
+		case token.L_BRACE_POUND:
+			block, err = p.parseCommentBlock()
+		default:
+			return nil, fmt.Errorf("unexpected token: %s", currentToken.Kind)
+		}
+
+		if err != nil {
+			return nil, err
+		}
+		blocks = append(blocks, block)
+	}
+
+	return &ast.Template{
+		Blocks: blocks,
+	}, nil
+}
+
+func (p *parser) parseTextBlock(tok lexer.Token) *ast.TextBlock {
+	return &ast.TextBlock{
+		Content: p.tokenContent(tok),
+	}
+}
+
+func (p *parser) parseCommentBlock() (*ast.CommentBlock, error) {
+	currentToken := p.next()
+	switch currentToken.Kind {
+	case token.COMMENT:
+		content := p.tokenContent(currentToken)
+		if err := p.expectToken(token.R_BRACE_POUND); err != nil {
+			return nil, err
+		}
+		return &ast.CommentBlock{
+			Content: content,
+		}, nil
+	case token.R_BRACE_POUND:
+		return &ast.CommentBlock{}, nil
+	default:
+		return nil, fmt.Errorf("unexpected token: %s", currentToken.Kind)
+	}
+}
+
+func (p *parser) parseDisplayBlock() (*ast.DisplayBlock, error) {
+	value, err := p.parseExpr(0)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := p.expectToken(token.R_DOUBLE_BRACE); err != nil {
+		return nil, err
+	}
+
+	return &ast.DisplayBlock{
+		Value: value,
+	}, nil
+}
+
+func (p *parser) parseStmt() (ast.Block, error) {
+	currentToken := p.next()
+	switch currentToken.Kind {
+	case token.KEYWORD_IF:
+		return p.parseIfBlock()
+	default:
+		return nil, fmt.Errorf("unexpected token: %s", currentToken.Kind)
+	}
+}
+
+func (p *parser) parseIfBlock() (*ast.IfBlock, error) {
+	var (
+		branches []ast.IfBranch
+		elseBody []ast.Block
+		inElse   bool
+	)
+
+	cond, err := p.parseExpr(0)
+	if err != nil {
+		return nil, err
+	}
+	if err := p.expectToken(token.R_BRACE_PERCENT); err != nil {
+		return nil, err
+	}
+
+	branches = append(branches, ast.IfBranch{
+		Condition:   cond,
+		Consequence: nil,
+	})
+
+	currentBranch := &branches[0]
+
+	for {
+		currentToken := p.next()
+		switch currentToken.Kind {
+		case token.TEXT:
+			block := p.parseTextBlock(currentToken)
+			if inElse {
+				elseBody = append(elseBody, block)
+			} else {
+				currentBranch.Consequence = append(currentBranch.Consequence, block)
+			}
+
+		case token.L_DOUBLE_BRACE:
+			block, err := p.parseDisplayBlock()
 			if err != nil {
 				return nil, err
 			}
-			list = append(list, expr)
-		}
-		if !p.GotoNextSibling() {
-			break
+			if inElse {
+				elseBody = append(elseBody, block)
+			} else {
+				currentBranch.Consequence = append(currentBranch.Consequence, block)
+			}
+
+		case token.L_BRACE_PERCENT:
+			currentToken := p.next()
+			switch currentToken.Kind {
+			case token.KEYWORD_ELSEIF:
+				if inElse {
+					return nil, fmt.Errorf("unexpected elseif tag after else")
+				}
+
+				cond, err := p.parseExpr(0)
+				if err != nil {
+					return nil, err
+				}
+				if err := p.expectToken(token.R_BRACE_PERCENT); err != nil {
+					return nil, err
+				}
+
+				branches = append(branches, ast.IfBranch{
+					Condition:   cond,
+					Consequence: nil,
+				})
+				currentBranch = &branches[len(branches)-1]
+
+			case token.KEYWORD_ELSE:
+				if err := p.expectToken(token.R_BRACE_PERCENT); err != nil {
+					return nil, err
+				}
+				inElse = true
+
+			case token.KEYWORD_END:
+				if err := p.expectToken(token.R_BRACE_PERCENT); err != nil {
+					return nil, err
+				}
+
+				var elsePtr *[]ast.Block
+				if inElse {
+					elsePtr = &elseBody
+				}
+
+				return &ast.IfBlock{
+					Branches:    branches,
+					Alternative: elsePtr,
+				}, nil
+
+			default:
+				return nil, fmt.Errorf("unexpected token in if block: %s", currentToken.Kind)
+			}
+
+		default:
+			return nil, fmt.Errorf("unexpected token: %s", currentToken.Kind)
 		}
 	}
-	return list, nil
 }
 
-func posFromTsPoint(point ts.Point) ast.Location {
-	return ast.Location{
-		Line:   point.Row,
-		Column: point.Column,
+var precMap = map[token.Kind]struct {
+	prec  int
+	assoc bool
+}{
+	token.KEYWORD_OR:  {prec: 1, assoc: false},
+	token.KEYWORD_AND: {prec: 2, assoc: false},
+	token.EQUAL_EQUAL: {prec: 3, assoc: false},
+	token.PIPE:        {prec: 7, assoc: false},
+}
+
+func (p *parser) parseExpr(minPrec int) (ast.Expr, error) {
+	node, err := p.parsePrimaryExpr()
+	if err != nil {
+		return nil, err
+	}
+
+	for {
+		currentToken := p.peek()
+		// TODO(skewb1k): fixme.
+		if currentToken.Kind == token.R_DOUBLE_BRACE || currentToken.Kind == token.R_BRACE_PERCENT {
+			break
+		}
+		op, ok := precMap[currentToken.Kind]
+		if !ok {
+			return nil, fmt.Errorf("unexpected token: %s", currentToken.Kind)
+		}
+		if op.prec < minPrec {
+			break
+		}
+		p.index++
+
+		right, err := p.parseExpr(op.prec)
+		if err != nil {
+			return nil, err
+		}
+
+		node = &ast.BinaryExpr{
+			LOperand: node,
+			Operator: 0,
+			ROperand: right,
+		}
+	}
+
+	return node, nil
+}
+
+func (p *parser) parsePrimaryExpr() (ast.Expr, error) {
+	currentToken := p.next()
+	switch currentToken.Kind {
+	case token.IDENTIFIER:
+		return &ast.Identifier{
+			// Start_: ast.Pos{},
+			Value: p.tokenContent(currentToken),
+		}, nil
+
+	case token.BANG:
+		operand, err := p.parsePrimaryExpr()
+		if err != nil {
+			return nil, err
+		}
+		return &ast.UnaryExpr{
+			// OperatorLocation: ast.Location{},
+			Operator: token.BANG,
+			Operand:  operand,
+		}, nil
+
+	case token.L_PAREN:
+		value, err := p.parseExpr(0)
+		if err != nil {
+			return nil, err
+		}
+		if err := p.expectToken(token.R_PAREN); err != nil {
+			return nil, err
+		}
+		return &ast.ParenExpr{
+			// LparenLocation: ast.Location{},
+			Value: value,
+		}, nil
+
+	default:
+		return nil, fmt.Errorf("expected expression, got %s", currentToken.Kind)
 	}
 }
