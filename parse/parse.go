@@ -323,8 +323,39 @@ func (p *parser) parseExpr() (ast.Expr, error) {
 		paren.Value = value
 		return &paren, nil
 
+	case "conditional_expression":
+		p.GotoFirstChild()
+		defer p.GotoParent()
+		var conditional ast.ConditionalExpr
+
+		condition, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		conditional.Condition = condition
+		p.GotoNextSibling() // <expr>
+
+		p.GotoNextSibling() // '?'
+
+		consequence, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		conditional.Consequence = consequence
+		p.GotoNextSibling() // <expr>
+
+		p.GotoNextSibling() // ':'
+
+		alternative, err := p.parseExpr()
+		if err != nil {
+			return nil, err
+		}
+		conditional.Alternative = alternative
+
+		return &conditional, nil
+
 	default:
-		return nil, fmt.Errorf("expected expression, found %s", n.Utf8Text(p.source))
+		return nil, fmt.Errorf("expected expression, found (%s) %q", n.Kind(), n.Utf8Text(p.source))
 	}
 }
 

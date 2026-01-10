@@ -39,6 +39,10 @@ var stableTests = [...]struct {
 		"{{ ((a)) }}",
 	},
 	{
+		"conditional",
+		"{{ true ? a : b }}",
+	},
+	{
 		"inline comment",
 		"a{# comment #}b",
 	},

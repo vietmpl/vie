@@ -91,6 +91,13 @@ func (f *formatter) expr(e ast.Expr) {
 		io.WriteString(f.w, " | ")
 		io.WriteString(f.w, n.Function.Value)
 
+	case *ast.ConditionalExpr:
+		f.expr(n.Condition)
+		io.WriteString(f.w, " ? ")
+		f.expr(n.Consequence)
+		io.WriteString(f.w, " : ")
+		f.expr(n.Alternative)
+
 	default:
 		panic(fmt.Sprintf("format: unexpected expr type %T", e))
 	}

@@ -111,32 +111,41 @@ type (
 		Argument Expr
 		Function Identifier
 	}
+
+	ConditionalExpr struct {
+		Condition   Expr
+		Consequence Expr
+		Alternative Expr
+	}
 )
 
-func (*BasicLiteral) exprNode() {}
-func (*Identifier) exprNode()   {}
-func (*UnaryExpr) exprNode()    {}
-func (*BinaryExpr) exprNode()   {}
-func (*ParenExpr) exprNode()    {}
-func (*CallExpr) exprNode()     {}
-func (*PipeExpr) exprNode()     {}
+func (*BasicLiteral) exprNode()    {}
+func (*Identifier) exprNode()      {}
+func (*UnaryExpr) exprNode()       {}
+func (*BinaryExpr) exprNode()      {}
+func (*ParenExpr) exprNode()       {}
+func (*CallExpr) exprNode()        {}
+func (*PipeExpr) exprNode()        {}
+func (*ConditionalExpr) exprNode() {}
 
-func (x *BasicLiteral) Start() Location { return x.Start_ }
-func (x *Identifier) Start() Location   { return x.Start_ }
-func (x *UnaryExpr) Start() Location    { return x.OperatorLocation }
-func (x *BinaryExpr) Start() Location   { return x.LOperand.Start() }
-func (x *ParenExpr) Start() Location    { return x.LparenLocation }
-func (x *CallExpr) Start() Location     { return x.Function.Start() }
-func (x *PipeExpr) Start() Location     { return x.Argument.Start() }
+func (x *BasicLiteral) Start() Location    { return x.Start_ }
+func (x *Identifier) Start() Location      { return x.Start_ }
+func (x *UnaryExpr) Start() Location       { return x.OperatorLocation }
+func (x *BinaryExpr) Start() Location      { return x.LOperand.Start() }
+func (x *ParenExpr) Start() Location       { return x.LparenLocation }
+func (x *CallExpr) Start() Location        { return x.Function.Start() }
+func (x *PipeExpr) Start() Location        { return x.Argument.Start() }
+func (x *ConditionalExpr) Start() Location { return x.Condition.Start() }
 
-func (*TextBlock) node()    {}
-func (*CommentBlock) node() {}
-func (*DisplayBlock) node() {}
-func (*IfBlock) node()      {}
-func (*BasicLiteral) node() {}
-func (*Identifier) node()   {}
-func (*UnaryExpr) node()    {}
-func (*BinaryExpr) node()   {}
-func (*ParenExpr) node()    {}
-func (*CallExpr) node()     {}
-func (*PipeExpr) node()     {}
+func (*TextBlock) node()       {}
+func (*CommentBlock) node()    {}
+func (*DisplayBlock) node()    {}
+func (*IfBlock) node()         {}
+func (*BasicLiteral) node()    {}
+func (*Identifier) node()      {}
+func (*UnaryExpr) node()       {}
+func (*BinaryExpr) node()      {}
+func (*ParenExpr) node()       {}
+func (*CallExpr) node()        {}
+func (*PipeExpr) node()        {}
+func (*ConditionalExpr) node() {}

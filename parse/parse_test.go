@@ -48,6 +48,10 @@ var errorTests = [...]struct {
 		"{{ \" }}",
 	},
 	{
+		"unclosed-conditional-expr",
+		"{{ true ? \"\" }}",
+	},
+	{
 		"unclosed-if-tag",
 		"{% if true",
 	},

@@ -22,8 +22,10 @@ const (
 	R_PAREN
 	BANG
 	BANG_EQUAL
+	COLON
 	EQUAL_EQUAL
 	PIPE
+	QUESTION_MARK
 	TILDE
 	KEYWORD_AND
 	KEYWORD_ELSE
@@ -55,8 +57,10 @@ var kindToString = [...]string{
 	R_PAREN:         ")",
 	BANG:            "!",
 	BANG_EQUAL:      "!=",
+	COLON:           ":",
 	EQUAL_EQUAL:     "==",
 	PIPE:            "|",
+	QUESTION_MARK:   "?",
 	TILDE:           "~",
 	KEYWORD_AND:     "and",
 	KEYWORD_ELSE:    "else",

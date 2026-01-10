@@ -226,6 +226,9 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 	case *ast.PipeExpr:
 		return a.checkFunc(c, e.Function, []ast.Expr{e.Argument})
 
+	case *ast.ConditionalExpr:
+		return a.checkFunc(c, e.Function, []ast.Expr{e.Argument})
+
 	default:
 		panic(fmt.Sprintf("analyzer: unexpected expr type %T", expr))
 	}
