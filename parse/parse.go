@@ -234,7 +234,7 @@ func (p *parser) parseExpr() (ast.Expr, error) {
 
 		nn := p.Node()
 		unary.OperatorLocation = posFromTsPoint(nn.StartPosition())
-		unary.Operator = ast.ParseUnaryOperator(nn.Utf8Text(p.source))
+		unary.Operator = parseUnaryOperator(nn.Utf8Text(p.source))
 
 		p.GotoNextSibling()
 		operand, err := p.parseExpr()
@@ -256,7 +256,7 @@ func (p *parser) parseExpr() (ast.Expr, error) {
 		binary.LOperand = lOperand
 
 		p.GotoNextSibling()
-		binary.Operator = ast.ParseBinaryOperator(p.Node().Utf8Text(p.source))
+		binary.Operator = parseBinaryOperator(p.Node().Utf8Text(p.source))
 
 		p.GotoNextSibling()
 		rOperand, err := p.parseExpr()

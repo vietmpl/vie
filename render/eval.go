@@ -5,6 +5,7 @@ import (
 
 	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/builtin"
+	"github.com/vietmpl/vie/token"
 	"github.com/vietmpl/vie/value"
 )
 
@@ -26,24 +27,24 @@ func (r renderer) evalExpr(expr ast.Expr) value.Value {
 		x := r.evalExpr(e.LOperand)
 		y := r.evalExpr(e.ROperand)
 		switch e.Operator {
-		case ast.CONCAT:
+		case token.TILDE:
 			xx := x.(value.String)
 			yy := y.(value.String)
 			return xx.Concat(yy)
 
-		case ast.EQUAL:
+		case token.EQUAL_EQUAL:
 			return value.Eq(x, y)
 
-		case ast.NOT_EQUAL:
+		case token.BANG_EQUAL:
 			return value.Neq(x, y)
 
-		case ast.AND:
+		case token.KEYWORD_AND:
 			// TODO: validate values.
 			xx := x.(value.Bool)
 			yy := y.(value.Bool)
 			return xx.And(yy)
 
-		case ast.OR:
+		case token.KEYWORD_OR:
 			// TODO: validate values.
 			xx := x.(value.Bool)
 			yy := y.(value.Bool)

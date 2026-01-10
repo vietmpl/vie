@@ -5,6 +5,7 @@ import (
 
 	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/builtin"
+	"github.com/vietmpl/vie/token"
 	"github.com/vietmpl/vie/value"
 )
 
@@ -118,7 +119,7 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 
 	case *ast.BinaryExpr:
 		switch e.Operator {
-		case ast.CONCAT:
+		case token.TILDE:
 			x := a.checkExpr(c, e.LOperand)
 			y := a.checkExpr(c, e.ROperand)
 			if x == nil || y == nil {
@@ -139,7 +140,7 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 			})
 			return value.TypeString
 
-		case ast.EQUAL, ast.NOT_EQUAL:
+		case token.EQUAL_EQUAL, token.BANG_EQUAL:
 			x := a.checkExpr(c, e.LOperand)
 			y := a.checkExpr(c, e.ROperand)
 			if x == nil || y == nil {
@@ -191,7 +192,7 @@ func (a *Analyzer) checkExpr(c internalContext, expr ast.Expr) any {
 			}
 			return value.TypeBool
 
-		case ast.AND, ast.OR:
+		case token.KEYWORD_AND, token.KEYWORD_OR:
 			x := a.checkExpr(c, e.LOperand)
 			y := a.checkExpr(c, e.ROperand)
 			if x == nil || y == nil {
