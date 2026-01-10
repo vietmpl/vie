@@ -18,7 +18,8 @@ type Template struct {
 // Node is the base interface implemented by all AST nodes.
 type Node interface {
 	node()
-	// TODO(skewb1k): add Start().
+	Start() Location
+	// TODO(skewb1k): add End().
 }
 
 type Block interface {
@@ -28,9 +29,7 @@ type Block interface {
 
 type Expr interface {
 	Node
-	Start() Location
 	exprNode()
-	// TODO(skewb1k): add End().
 }
 
 // Blocks ----------------------------------------
