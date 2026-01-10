@@ -1,7 +1,6 @@
 package parse
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -65,18 +64,8 @@ func (p *parser) parseBlock() (ast.Block, error) {
 	// TODO(skewb1k): use KindId instead of string comparisons.
 	switch n.Kind() {
 	case "text":
-		content := []byte(n.Utf8Text(p.source))
-
-		if len(content) == 0 {
-			return nil, nil
-		}
-
-		// TODO(skewb1k): improve performace.
-		content = bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
-		content = bytes.ReplaceAll(content, []byte("\r"), []byte("\n"))
-
 		return &ast.TextBlock{
-			Content: string(content),
+			Content: n.Utf8Text(p.source),
 		}, nil
 
 	case "comment_tag":
