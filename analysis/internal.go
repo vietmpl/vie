@@ -72,8 +72,8 @@ func (a *Analyzer) checkBlock(c internalContext, block ast.Block) {
 			}
 			a.checkBlocks(c, branch.Consequence)
 		}
-		if b.ElseConsequence != nil {
-			a.checkBlocks(c, *b.ElseConsequence)
+		if b.Alternative != nil {
+			a.checkBlocks(c, *b.Alternative)
 		}
 
 	default:

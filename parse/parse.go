@@ -162,7 +162,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 				}
 				p.GotoParent()
 
-				ifBlock.ElseConsequence = &[]ast.Block{}
+				ifBlock.Alternative = &[]ast.Block{}
 				for p.GotoNextSibling() {
 					if p.Node().Kind() == "end_tag" {
 						p.GotoPreviousSibling()
@@ -173,7 +173,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 						return nil, err
 					}
 					if block != nil {
-						*ifBlock.ElseConsequence = append(*ifBlock.ElseConsequence, block)
+						*ifBlock.Alternative = append(*ifBlock.Alternative, block)
 					}
 				}
 
