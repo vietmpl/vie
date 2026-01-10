@@ -65,17 +65,18 @@ func (p *parser) parseBlock() (ast.Block, error) {
 	// TODO(skewb1k): use KindId instead of string comparisons.
 	switch n.Kind() {
 	case "text":
-		b := p.source[n.StartByte():n.EndByte()]
+		content := []byte(n.Utf8Text(p.source))
 
-		// TODO(skewb1k): improve performace.
-		b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
-		b = bytes.ReplaceAll(b, []byte("\r"), []byte("\n"))
-
-		if len(b) == 0 {
+		if len(content) == 0 {
 			return nil, nil
 		}
+
+		// TODO(skewb1k): improve performace.
+		content = bytes.ReplaceAll(content, []byte("\r\n"), []byte("\n"))
+		content = bytes.ReplaceAll(content, []byte("\r"), []byte("\n"))
+
 		return &ast.TextBlock{
-			Content: string(b),
+			Content: string(content),
 		}, nil
 
 	case "comment_tag":
@@ -90,7 +91,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 			return nil, fmt.Errorf("comments cannot contain line breaks")
 		}
 		if commentNode.Kind() == "comment" {
-			comment.Content = p.nodeContent(p.Node())
+			comment.Content = p.Node().Utf8Text(p.source)
 		}
 		return &comment, nil
 
@@ -109,7 +110,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 		// handle `{{ "" "" }}`
 		nn := p.Node()
 		if nn.IsError() {
-			return nil, fmt.Errorf("unexpected %s in display statement", p.nodeContent(nn))
+			return nil, fmt.Errorf("unexpected %s in display statement", nn.Utf8Text(p.source))
 		}
 		return &displayBlock, nil
 
@@ -167,7 +168,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 				// handle `{% else "" %}`
 				nn := p.Node()
 				if nn.IsError() {
-					content := p.nodeContent(nn)
+					content := nn.Utf8Text(p.source)
 					return nil, fmt.Errorf("unexpected %q after else", content)
 				}
 				p.GotoParent()
@@ -204,7 +205,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 		return nil, fmt.Errorf("expected {%% end %%}, found EOF")
 
 	case "end_tag", "elseif_tag", "else_tag":
-		return nil, fmt.Errorf("unexpected %s", strings.TrimSpace(p.nodeContent(n)))
+		return nil, fmt.Errorf("unexpected %s", strings.TrimSpace(n.Utf8Text(p.source)))
 
 	default:
 		panic(fmt.Sprintf("parser: unexpected block kind %q while parsing %s", n.Kind(), p.source))
@@ -214,27 +215,27 @@ func (p *parser) parseBlock() (ast.Block, error) {
 func (p *parser) parseExpr() (ast.Expr, error) {
 	n := p.Node()
 	if n.IsError() || n.IsMissing() {
-		return nil, fmt.Errorf("expected expression, found %s", p.nodeContent(n))
+		return nil, fmt.Errorf("expected expression, found %s", n.Utf8Text(p.source))
 	}
 	switch n.Kind() {
 	case "string_literal":
 		return &ast.BasicLiteral{
 			Start_: posFromTsPoint(n.StartPosition()),
 			Kind:   ast.KindString,
-			Value:  p.nodeContent(n),
+			Value:  n.Utf8Text(p.source),
 		}, nil
 
 	case "boolean_literal":
 		return &ast.BasicLiteral{
 			Start_: posFromTsPoint(n.StartPosition()),
 			Kind:   ast.KindBool,
-			Value:  p.nodeContent(n),
+			Value:  n.Utf8Text(p.source),
 		}, nil
 
 	case "identifier":
 		return &ast.Identifier{
 			Start_: posFromTsPoint(n.StartPosition()),
-			Value:  p.nodeContent(n),
+			Value:  n.Utf8Text(p.source),
 		}, nil
 
 	case "unary_expression":
@@ -244,7 +245,7 @@ func (p *parser) parseExpr() (ast.Expr, error) {
 
 		nn := p.Node()
 		unary.OperatorLocation = posFromTsPoint(nn.StartPosition())
-		unary.Operator = ast.ParseUnaryOperator(p.nodeContent(nn))
+		unary.Operator = ast.ParseUnaryOperator(nn.Utf8Text(p.source))
 
 		p.GotoNextSibling()
 		operand, err := p.parseExpr()
@@ -266,7 +267,7 @@ func (p *parser) parseExpr() (ast.Expr, error) {
 		binary.LOperand = lOperand
 
 		p.GotoNextSibling()
-		binary.Operator = ast.ParseBinaryOperator(p.nodeContent(p.Node()))
+		binary.Operator = ast.ParseBinaryOperator(p.Node().Utf8Text(p.source))
 
 		p.GotoNextSibling()
 		rOperand, err := p.parseExpr()
@@ -285,7 +286,7 @@ func (p *parser) parseExpr() (ast.Expr, error) {
 		nn := p.Node()
 		call.Function = ast.Identifier{
 			Start_: posFromTsPoint(nn.StartPosition()),
-			Value:  p.nodeContent(nn),
+			Value:  nn.Utf8Text(p.source),
 		}
 		p.GotoNextSibling()
 		arguments, err := p.parseExprList()
@@ -312,9 +313,9 @@ func (p *parser) parseExpr() (ast.Expr, error) {
 
 		nn := p.Node()
 		if nn.IsError() || nn.IsMissing() {
-			return nil, fmt.Errorf("expected expression, found %s", p.nodeContent(n))
+			return nil, fmt.Errorf("expected expression, found %s", n.Utf8Text(p.source))
 		}
-		pipe.Function = ast.Identifier{Value: p.nodeContent(nn)}
+		pipe.Function = ast.Identifier{Value: nn.Utf8Text(p.source)}
 
 		return &pipe, nil
 
@@ -334,7 +335,7 @@ func (p *parser) parseExpr() (ast.Expr, error) {
 		return &paren, nil
 
 	default:
-		return nil, fmt.Errorf("expected expression, found %s", p.nodeContent(n))
+		return nil, fmt.Errorf("expected expression, found %s", n.Utf8Text(p.source))
 	}
 }
 
@@ -356,10 +357,6 @@ func (p *parser) parseExprList() ([]ast.Expr, error) {
 		}
 	}
 	return list, nil
-}
-
-func (p *parser) nodeContent(n *ts.Node) string {
-	return string(p.source[n.StartByte():n.EndByte()])
 }
 
 func posFromTsPoint(point ts.Point) ast.Location {
