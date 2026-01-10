@@ -45,9 +45,9 @@ func (f *formatter) block(b ast.Block) {
 			io.WriteString(f.w, " %}")
 			f.blocks(branch.Consequence)
 		}
-		if n.ElseConsequence != nil {
+		if n.Alternative != nil {
 			io.WriteString(f.w, "{% else %}")
-			f.blocks(*n.ElseConsequence)
+			f.blocks(*n.Alternative)
 		}
 		io.WriteString(f.w, "{% end %}")
 

@@ -45,8 +45,8 @@ type (
 	}
 
 	IfBlock struct {
-		Branches        []IfBranch
-		ElseConsequence *[]Block
+		Branches    []IfBranch
+		Alternative *[]Block
 	}
 )
 

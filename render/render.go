@@ -54,8 +54,8 @@ func (r *renderer) renderBlock(block ast.Block) {
 				break
 			}
 		}
-		if b.ElseConsequence != nil {
-			r.renderBlocks(*b.ElseConsequence)
+		if b.Alternative != nil {
+			r.renderBlocks(*b.Alternative)
 		}
 
 	default:
