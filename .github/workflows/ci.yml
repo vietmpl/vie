@@ -44,11 +44,6 @@ jobs:
       matrix:
         os: [ubuntu-24.04, windows-2022, macos-15]
     steps:
-      - name: Set git to use LF
-        if: runner.os == 'Windows'
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
       - name: Checkout repository
         uses: actions/checkout@v6
       - name: Setup Go
