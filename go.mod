@@ -5,7 +5,7 @@ go 1.25.5
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/rogpeppe/go-internal v1.14.1
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/tree-sitter/go-tree-sitter v0.25.0
 	github.com/vietmpl/tree-sitter-vie v0.3.0
 )
