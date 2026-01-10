@@ -1,5 +1,9 @@
 package ast
 
+import (
+	"github.com/vietmpl/vie/token"
+)
+
 type Location struct {
 	Line   uint
 	Column uint
@@ -83,13 +87,13 @@ type (
 
 	UnaryExpr struct {
 		OperatorLocation Location
-		Operator         UnaryOperator
+		Operator         token.Kind
 		Operand          Expr
 	}
 
 	BinaryExpr struct {
 		LOperand Expr
-		Operator BinaryOperator
+		Operator token.Kind
 		ROperand Expr
 	}
 
