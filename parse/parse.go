@@ -1,4 +1,4 @@
-package parser
+package parse
 
 import (
 	"bytes"
@@ -16,15 +16,15 @@ var vieLanguage = ts.NewLanguage(tree_sitter_vie.Language())
 type parser struct {
 	*ts.TreeCursor
 
-	src []byte
+	source []byte
 }
 
-func ParseBytes(src []byte) (*ast.Template, error) {
+func Source(source []byte) (*ast.Template, error) {
 	tsParser := ts.NewParser()
 	_ = tsParser.SetLanguage(vieLanguage)
 	defer tsParser.Close()
 
-	tree := tsParser.Parse(src, nil)
+	tree := tsParser.Parse(source, nil)
 	defer tree.Close()
 
 	cursor := tree.Walk()
@@ -32,7 +32,7 @@ func ParseBytes(src []byte) (*ast.Template, error) {
 
 	p := parser{
 		TreeCursor: cursor,
-		src:        src,
+		source:     source,
 	}
 
 	var template ast.Template
@@ -65,7 +65,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 	// TODO(skewb1k): use KindId instead of string comparisons.
 	switch n.Kind() {
 	case "text":
-		b := p.src[n.StartByte():n.EndByte()]
+		b := p.source[n.StartByte():n.EndByte()]
 
 		// TODO(skewb1k): improve performace.
 		b = bytes.ReplaceAll(b, []byte("\r\n"), []byte("\n"))
@@ -207,7 +207,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 		return nil, fmt.Errorf("unexpected %s", strings.TrimSpace(p.nodeContent(n)))
 
 	default:
-		panic(fmt.Sprintf("parser: unexpected block kind %q while parsing %s", n.Kind(), p.src))
+		panic(fmt.Sprintf("parser: unexpected block kind %q while parsing %s", n.Kind(), p.source))
 	}
 }
 
@@ -359,7 +359,7 @@ func (p *parser) parseExprList() ([]ast.Expr, error) {
 }
 
 func (p *parser) nodeContent(n *ts.Node) string {
-	return string(p.src[n.StartByte():n.EndByte()])
+	return string(p.source[n.StartByte():n.EndByte()])
 }
 
 func posFromTsPoint(point ts.Point) ast.Location {

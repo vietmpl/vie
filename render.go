@@ -7,7 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vietmpl/vie/analysis"
-	"github.com/vietmpl/vie/parser"
+	"github.com/vietmpl/vie/parse"
 	"github.com/vietmpl/vie/render"
 	"github.com/vietmpl/vie/value"
 )
@@ -24,7 +24,7 @@ func newCmdRender() *cobra.Command {
 				return err
 			}
 
-			f, err := parser.ParseBytes(src)
+			f, err := parse.Source(src)
 			if err != nil {
 				return err
 			}

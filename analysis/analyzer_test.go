@@ -5,7 +5,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/vietmpl/vie/analysis"
-	"github.com/vietmpl/vie/parser"
+	"github.com/vietmpl/vie/parse"
 	"github.com/vietmpl/vie/value"
 )
 
@@ -29,7 +29,7 @@ func TestTypes(t *testing.T) {
 		t.Run(testCase.input, func(t *testing.T) {
 			t.Parallel()
 
-			f, err := parser.ParseBytes([]byte(testCase.input))
+			f, err := parse.Source([]byte(testCase.input))
 			if err != nil {
 				t.Fatal(err)
 			}

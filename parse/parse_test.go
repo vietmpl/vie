@@ -1,10 +1,10 @@
-package parser_test
+package parse_test
 
 import (
 	"strconv"
 	"testing"
 
-	"github.com/vietmpl/vie/parser"
+	"github.com/vietmpl/vie/parse"
 )
 
 var errorTests = [...]struct {
@@ -64,12 +64,12 @@ var errorTests = [...]struct {
 	},
 }
 
-func TestParseBytes(t *testing.T) {
+func TestSource(t *testing.T) {
 	t.Parallel()
 	for _, test := range errorTests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			_, err := parser.ParseBytes([]byte(test.source))
+			_, err := parse.Source([]byte(test.source))
 			if err == nil {
 				t.Fatalf("expected error, got no error")
 			}
@@ -77,11 +77,11 @@ func TestParseBytes(t *testing.T) {
 	}
 }
 
-// TestParseBytesFuzz checks that ParseBytes never panics on incomplete
-// or slightly modified input. It concatenates all [errorTests] sources, then
+// TestSourceFuzz checks that [parse.Source] never panics on incomplete or
+// slightly modified input. It concatenates all [errorTests] sources, then
 // tests truncating from the start, truncating from the end, and removing each
 // character.
-func TestParseBytesFuzz(t *testing.T) {
+func TestSourceFuzz(t *testing.T) {
 	t.Parallel()
 
 	var combined []byte
@@ -94,7 +94,7 @@ func TestParseBytesFuzz(t *testing.T) {
 		t.Run("start_"+strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 			fragment := combined[i:]
-			_, _ = parser.ParseBytes(fragment)
+			_, _ = parse.Source(fragment)
 		})
 	}
 
@@ -103,7 +103,7 @@ func TestParseBytesFuzz(t *testing.T) {
 		t.Run("end_"+strconv.Itoa(i), func(t *testing.T) {
 			t.Parallel()
 			fragment := combined[:i]
-			_, _ = parser.ParseBytes(fragment)
+			_, _ = parse.Source(fragment)
 		})
 	}
 
@@ -113,7 +113,7 @@ func TestParseBytesFuzz(t *testing.T) {
 			t.Parallel()
 			fragment := append([]byte(nil), combined[:i]...)
 			fragment = append(fragment, combined[i+1:]...)
-			_, _ = parser.ParseBytes(fragment)
+			_, _ = parse.Source(fragment)
 		})
 	}
 }

@@ -6,7 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/vietmpl/vie/analysis"
-	"github.com/vietmpl/vie/parser"
+	"github.com/vietmpl/vie/parse"
 )
 
 func newCmdContext() *cobra.Command {
@@ -21,7 +21,7 @@ func newCmdContext() *cobra.Command {
 				return err
 			}
 
-			f, err := parser.ParseBytes(src)
+			f, err := parse.Source(src)
 			if err != nil {
 				return err
 			}

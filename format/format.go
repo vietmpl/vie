@@ -5,7 +5,7 @@ import (
 	"io"
 
 	"github.com/vietmpl/vie/ast"
-	"github.com/vietmpl/vie/parser"
+	"github.com/vietmpl/vie/parse"
 )
 
 // Template formats input file and writes the result to dst.
@@ -27,7 +27,7 @@ func Template(dst io.Writer, template *ast.Template) error {
 // It buffers the entire formatted result internally; callers that want to
 // stream output directly could use [Template] instead.
 func Source(src []byte) ([]byte, error) {
-	parsed, err := parser.ParseBytes(src)
+	parsed, err := parse.Source(src)
 	if err != nil {
 		return nil, err
 	}
