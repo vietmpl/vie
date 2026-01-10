@@ -84,7 +84,7 @@ func (p *parser) parseBlock() (ast.Block, error) {
 		}
 		return &comment, nil
 
-	case "render":
+	case "display_tag":
 		var displayBlock ast.DisplayBlock
 		p.GotoFirstChild()
 		defer p.GotoParent()
