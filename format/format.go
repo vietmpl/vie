@@ -6,9 +6,9 @@ import (
 )
 
 func Template(template *ast.Template) []byte {
-	var f formatter
-	f.blocks(template.Blocks)
-	return f.buffer.Bytes()
+	var p printer
+	p.printBlocks(template.Blocks)
+	return p.buffer.Bytes()
 }
 
 // Source is a convenience function that formats src and returns the result or
