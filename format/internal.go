@@ -1,14 +1,14 @@
 package format
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 
 	"github.com/vietmpl/vie/ast"
 )
 
 type formatter struct {
-	w io.Writer
+	buffer bytes.Buffer
 }
 
 func (f *formatter) blocks(blocks []ast.Block) {
@@ -20,36 +20,36 @@ func (f *formatter) blocks(blocks []ast.Block) {
 func (f *formatter) block(b ast.Block) {
 	switch n := b.(type) {
 	case *ast.TextBlock:
-		io.WriteString(f.w, n.Content)
+		f.buffer.WriteString(n.Content)
 
 	case *ast.CommentBlock:
 		// TODO(skewb1k): format leading/trailing whitespaces.
-		io.WriteString(f.w, "{#")
-		io.WriteString(f.w, n.Content)
-		io.WriteString(f.w, "#}")
+		f.buffer.WriteString("{#")
+		f.buffer.WriteString(n.Content)
+		f.buffer.WriteString("#}")
 
 	case *ast.DisplayBlock:
-		io.WriteString(f.w, "{{ ")
+		f.buffer.WriteString("{{ ")
 		f.expr(n.Value)
-		io.WriteString(f.w, " }}")
+		f.buffer.WriteString(" }}")
 
 	case *ast.IfBlock:
-		io.WriteString(f.w, "{% if ")
+		f.buffer.WriteString("{% if ")
 		branch0 := n.Branches[0]
 		f.expr(branch0.Condition)
-		io.WriteString(f.w, " %}")
+		f.buffer.WriteString(" %}")
 		f.blocks(branch0.Consequence)
 		for _, branch := range n.Branches[1:] {
-			io.WriteString(f.w, "{% elseif ")
+			f.buffer.WriteString("{% elseif ")
 			f.expr(branch.Condition)
-			io.WriteString(f.w, " %}")
+			f.buffer.WriteString(" %}")
 			f.blocks(branch.Consequence)
 		}
 		if n.Alternative != nil {
-			io.WriteString(f.w, "{% else %}")
+			f.buffer.WriteString("{% else %}")
 			f.blocks(*n.Alternative)
 		}
-		io.WriteString(f.w, "{% end %}")
+		f.buffer.WriteString("{% end %}")
 
 	default:
 		panic(fmt.Sprintf("format: unexpected block type %T", b))
@@ -59,37 +59,37 @@ func (f *formatter) block(b ast.Block) {
 func (f *formatter) expr(e ast.Expr) {
 	switch n := e.(type) {
 	case *ast.BasicLiteral:
-		io.WriteString(f.w, n.Value)
+		f.buffer.WriteString(n.Value)
 
 	case *ast.Identifier:
-		io.WriteString(f.w, n.Value)
+		f.buffer.WriteString(n.Value)
 
 	case *ast.UnaryExpr:
-		io.WriteString(f.w, n.Operator.String())
+		f.buffer.WriteString(n.Operator.String())
 		f.expr(n.Operand)
 
 	case *ast.BinaryExpr:
 		f.expr(n.LOperand)
-		io.WriteString(f.w, " ")
-		io.WriteString(f.w, n.Operator.String())
-		io.WriteString(f.w, " ")
+		f.buffer.WriteByte(' ')
+		f.buffer.WriteString(n.Operator.String())
+		f.buffer.WriteByte(' ')
 		f.expr(n.ROperand)
 
 	case *ast.ParenExpr:
-		io.WriteString(f.w, "(")
+		f.buffer.WriteByte('(')
 		f.expr(n.Value)
-		io.WriteString(f.w, ")")
+		f.buffer.WriteByte(')')
 
 	case *ast.CallExpr:
 		f.expr(&n.Function)
-		io.WriteString(f.w, "(")
+		f.buffer.WriteByte('(')
 		f.exprList(n.Arguments)
-		io.WriteString(f.w, ")")
+		f.buffer.WriteByte(')')
 
 	case *ast.PipeExpr:
 		f.expr(n.Argument)
-		io.WriteString(f.w, " | ")
-		io.WriteString(f.w, n.Function.Value)
+		f.buffer.WriteString(" | ")
+		f.buffer.WriteString(n.Function.Value)
 
 	default:
 		panic(fmt.Sprintf("format: unexpected expr type %T", e))
@@ -101,7 +101,7 @@ func (f *formatter) exprList(l []ast.Expr) {
 		f.expr(l[0])
 	}
 	for i := 1; i < len(l); i++ {
-		io.WriteString(f.w, ", ")
+		f.buffer.WriteString(", ")
 		f.expr(l[i])
 	}
 }
