@@ -46,10 +46,6 @@ var stableTests = [...]struct {
 		"empty comment",
 		"{##}",
 	},
-	// {
-	// 	"multiline comment",
-	// 	"{# 1\n2\n3#}",
-	// },
 	{
 		"single space comment",
 		"{# #}",
@@ -73,9 +69,9 @@ var stableTests = [...]struct {
 }
 
 var transformTests = [...]struct {
-	name            string
-	source          string
-	expected_source string
+	name           string
+	source         string
+	expectedSource string
 }{
 	{
 		"adds spaces around display",
@@ -95,26 +91,27 @@ func TestSource(t *testing.T) {
 	for _, test := range stableTests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			testFormat(t, test.source, test.source)
+			expectFormat(t, test.source, test.source)
 		})
 	}
 
 	for _, test := range transformTests {
 		t.Run(test.name, func(t *testing.T) {
 			t.Parallel()
-			testFormat(t, test.source, test.expected_source)
+			expectFormat(t, test.source, test.expectedSource)
 		})
 	}
 }
 
-func testFormat(t *testing.T, source, expected_source string) {
+func expectFormat(t *testing.T, source, expectedSource string) {
 	t.Helper()
 
 	actual, err := format.Source([]byte(source))
 	if err != nil {
-		t.Fatal(err)
+		t.Error(err)
 	}
-	if expected_source != string(actual) {
-		t.Fatalf("expected %q, got %q", expected_source, actual)
+
+	if expectedSource != string(actual) {
+		t.Errorf("expected %q, got %q", expectedSource, actual)
 	}
 }
