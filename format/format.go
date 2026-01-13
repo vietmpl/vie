@@ -1,3 +1,4 @@
+// Package format provides canonical formatting for Vie template source code.
 package format
 
 import (
@@ -5,14 +6,16 @@ import (
 	"github.com/vietmpl/vie/parse"
 )
 
+// Template formats parsed Vie template and returns the result.
 func Template(template *ast.Template) []byte {
 	var p printer
 	p.printBlocks(template.Blocks)
 	return p.buffer.Bytes()
 }
 
-// Source is a convenience function that formats src and returns the result or
-// an error in case of a syntax error.
+// Source formats raw Vie template source and returns the result or a syntax error.
+//
+// For already parsed templates, use [Template].
 func Source(src []byte) ([]byte, error) {
 	template, err := parse.Source(src)
 	if err != nil {
