@@ -1,12 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"bytes"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
-	"github.com/vietmpl/vie/analysis"
 	"github.com/vietmpl/vie/parse"
 	"github.com/vietmpl/vie/render"
 	"github.com/vietmpl/vie/value"
@@ -34,26 +33,12 @@ func newCmdRender() *cobra.Command {
 				return err
 			}
 
-			analyzer := analysis.NewAnalyzer()
-			analyzer.Template(f, path)
-			typemap, diagnostics := analyzer.Results()
-			if len(diagnostics) > 0 {
-				printDiagnostics(diagnostics)
-				return nil
+			var buf bytes.Buffer
+			if err := render.Template(&buf, f, context); err != nil {
+				return err
 			}
-
-			errs := analysis.MergeTypes(typemap, context)
-			if len(errs) > 0 {
-				for _, err := range errs {
-					fmt.Println(err)
-				}
-				return nil
-			}
-
-			checkForUnusedVars(typemap, context)
-
-			render.MustRenderTemplate(os.Stdout, f, context)
-			return nil
+			_, err = os.Stdout.Write(buf.Bytes())
+			return err
 		},
 	}
 	return cmd
@@ -70,13 +55,4 @@ func parseContext(args []string) (map[string]value.Value, error) {
 		}
 	}
 	return context, nil
-}
-
-// checkForUnusedVars checks for variables in the context but not in template.
-func checkForUnusedVars(typemap map[string]value.Type, context map[string]value.Value) {
-	for varname := range context {
-		if _, ok := typemap[varname]; !ok {
-			fmt.Printf("warning: %s provided but not used\n", varname)
-		}
-	}
 }

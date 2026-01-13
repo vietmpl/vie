@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 
 	"github.com/spf13/cobra"
-	"github.com/vietmpl/vie/analysis"
 	"github.com/vietmpl/vie/template"
 )
 
@@ -31,22 +30,6 @@ func newCmdNew() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			typemap, diagnostics := tmpl.Analyze()
-			if len(diagnostics) > 0 {
-				printDiagnostics(diagnostics)
-				return nil
-			}
-
-			errs := analysis.MergeTypes(typemap, context)
-			if len(errs) > 0 {
-				for _, err := range errs {
-					fmt.Println(err)
-				}
-				return nil
-			}
-
-			checkForUnusedVars(typemap, context)
 
 			files, err := tmpl.Render(context)
 			if err != nil {
