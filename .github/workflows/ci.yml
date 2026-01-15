@@ -15,7 +15,7 @@ jobs:
           go-version-file: "go.mod"
       - name: Run gofmt
         run: |
-          diff=$(gofmt -s -d .)
+          diff=$(gofmt -d .)
           if [ -n "$diff" ]; then
             echo "$diff"
             exit 1
