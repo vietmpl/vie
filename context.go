@@ -11,6 +11,7 @@ import (
 
 func newCmdContext() *cobra.Command {
 	cmd := &cobra.Command{
+		// TODO(skewb1k): come up with better name.
 		Use:  "context PATH",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

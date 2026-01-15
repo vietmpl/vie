@@ -15,10 +15,10 @@ func (tv TypeVar) String() string {
 	return string(tv)
 }
 
-func MergeTypes(typemap map[string]value.Type, context map[string]value.Value) []error {
+func MergeTypes(typemap map[string]value.Type, data map[string]value.Value) []error {
 	var errors []error
 	for varname, typ := range typemap {
-		val, ok := context[varname]
+		val, ok := data[varname]
 		if ok {
 			if val.Type() != typ {
 				errors = append(errors, fmt.Errorf("%s: expected %s, got %s\n",
@@ -29,9 +29,9 @@ func MergeTypes(typemap map[string]value.Type, context map[string]value.Value) [
 			// TODO(skewb1k): maybe the parser should handle undefined variables.
 			switch typ {
 			case value.TypeBool:
-				context[varname] = value.Bool(false)
+				data[varname] = value.Bool(false)
 			case value.TypeString:
-				context[varname] = value.String("")
+				data[varname] = value.String("")
 			default:
 				panic(fmt.Sprintf("unexpected Type value: %d", typ))
 			}

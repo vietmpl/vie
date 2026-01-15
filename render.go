@@ -27,12 +27,12 @@ func newCmdRender() *cobra.Command {
 				return err
 			}
 
-			context, err := parseContext(args[1:])
+			data, err := parseData(args[1:])
 			if err != nil {
 				return err
 			}
 
-			out, err := render.Template(f, context)
+			out, err := render.Template(f, data)
 			if err != nil {
 				return err
 			}
@@ -43,15 +43,15 @@ func newCmdRender() *cobra.Command {
 	return cmd
 }
 
-func parseContext(args []string) (map[string]value.Value, error) {
-	context := make(map[string]value.Value)
+func parseData(args []string) (map[string]value.Value, error) {
+	data := make(map[string]value.Value)
 	for _, a := range args {
 		if strings.Contains(a, "=") {
 			kv := strings.SplitN(a, "=", 2)
-			context[kv[0]] = value.String(kv[1])
+			data[kv[0]] = value.String(kv[1])
 		} else {
-			context[a] = value.Bool(true)
+			data[a] = value.Bool(true)
 		}
 	}
-	return context, nil
+	return data, nil
 }

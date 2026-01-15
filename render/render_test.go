@@ -8,7 +8,7 @@ import (
 	"github.com/vietmpl/vie/value"
 )
 
-var noContextTests = map[string]struct {
+var noDataTests = map[string]struct {
 	source         string
 	expectedSource string
 }{
@@ -90,10 +90,10 @@ var noContextTests = map[string]struct {
 	},
 }
 
-var contextTests = map[string]struct {
+var dataTests = map[string]struct {
 	source         string
 	expectedSource string
-	context        map[string]value.Value
+	data           map[string]value.Value
 }{
 	"display var": {
 		"{{ a }}",
@@ -105,8 +105,8 @@ var contextTests = map[string]struct {
 }
 
 var errorTests = map[string]struct {
-	source  string
-	context map[string]value.Value
+	source string
+	data   map[string]value.Value
 }{
 	"display bool": {
 		"{{ true }}",
@@ -169,17 +169,17 @@ var errorTests = map[string]struct {
 func TestTemplate(t *testing.T) {
 	t.Parallel()
 
-	for name, test := range noContextTests {
+	for name, test := range noDataTests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 			expectRender(t, test.source, nil, test.expectedSource)
 		})
 	}
 
-	for name, test := range contextTests {
+	for name, test := range dataTests {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			expectRender(t, test.source, test.context, test.expectedSource)
+			expectRender(t, test.source, test.data, test.expectedSource)
 		})
 	}
 
@@ -192,7 +192,7 @@ func TestTemplate(t *testing.T) {
 				t.Error(err)
 			}
 
-			if _, err := render.Template(template, test.context); err == nil {
+			if _, err := render.Template(template, test.data); err == nil {
 				t.Errorf("succeeded unexpectedly")
 			}
 		})
@@ -202,7 +202,7 @@ func TestTemplate(t *testing.T) {
 func expectRender(
 	t *testing.T,
 	source string,
-	context map[string]value.Value,
+	data map[string]value.Value,
 	expectedSource string,
 ) {
 	t.Helper()
@@ -212,7 +212,7 @@ func expectRender(
 		t.Fatal(err)
 	}
 
-	actual, err := render.Template(template, context)
+	actual, err := render.Template(template, data)
 	if err != nil {
 		t.Error(err)
 	}

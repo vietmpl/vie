@@ -25,13 +25,13 @@ func newCmdNew() *cobra.Command {
 				return err
 			}
 
-			contextArgs := args[2:]
-			context, err := parseContext(contextArgs)
+			dataArgs := args[2:]
+			data, err := parseData(dataArgs)
 			if err != nil {
 				return err
 			}
 
-			files, err := tmpl.Render(context)
+			files, err := tmpl.Render(data)
 			if err != nil {
 				return err
 			}

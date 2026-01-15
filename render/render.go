@@ -5,9 +5,9 @@ import (
 	"github.com/vietmpl/vie/value"
 )
 
-func Template(template *ast.Template, context map[string]value.Value) ([]byte, error) {
+func Template(template *ast.Template, data map[string]value.Value) ([]byte, error) {
 	r := renderer{
-		context: context,
+		data: data,
 	}
 	if err := r.renderBlocks(template.Blocks); err != nil {
 		return nil, err

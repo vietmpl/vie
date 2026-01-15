@@ -11,8 +11,8 @@ import (
 )
 
 type renderer struct {
-	context map[string]value.Value
-	buffer  bytes.Buffer
+	data   map[string]value.Value
+	buffer bytes.Buffer
 }
 
 func (r *renderer) renderBlocks(b []ast.Block) error {
@@ -81,7 +81,7 @@ func (r renderer) evalExpr(e ast.Expr) (value.Value, error) {
 		return value.FromBasicLit(expr), nil
 
 	case *ast.Identifier:
-		return r.context[expr.Value], nil
+		return r.data[expr.Value], nil
 
 	case *ast.BinaryExpr:
 		lOperand, err := r.evalExpr(expr.LOperand)

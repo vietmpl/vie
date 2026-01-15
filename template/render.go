@@ -9,11 +9,11 @@ import (
 	"github.com/vietmpl/vie/value"
 )
 
-func (t Template) Render(context map[string]value.Value) (map[string][]byte, error) {
+func (t Template) Render(data map[string]value.Value) (map[string][]byte, error) {
 	files := make(map[string][]byte)
 
 	onFile := func(f *File, parent string) error {
-		name, err := render.Template(f.NameTemplate, context)
+		name, err := render.Template(f.NameTemplate, data)
 		if err != nil {
 			return err
 		}
@@ -21,7 +21,7 @@ func (t Template) Render(context map[string]value.Value) (map[string][]byte, err
 
 		if f.ContentTemplate != nil {
 			path = strings.TrimSuffix(path, ".vie")
-			content, err := render.Template(f.ContentTemplate, context)
+			content, err := render.Template(f.ContentTemplate, data)
 			if err != nil {
 				return err
 			}
@@ -36,7 +36,7 @@ func (t Template) Render(context map[string]value.Value) (map[string][]byte, err
 	}
 
 	onDir := func(d *Dir, parent string) error {
-		name, err := render.Template(d.NameTemplate, context)
+		name, err := render.Template(d.NameTemplate, data)
 		if err != nil {
 			return err
 		}
