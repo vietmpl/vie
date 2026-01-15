@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"os"
 	"strings"
 
@@ -33,11 +32,11 @@ func newCmdRender() *cobra.Command {
 				return err
 			}
 
-			var buf bytes.Buffer
-			if err := render.Template(&buf, f, context); err != nil {
+			out, err := render.Template(f, context)
+			if err != nil {
 				return err
 			}
-			_, err = os.Stdout.Write(buf.Bytes())
+			_, err = os.Stdout.Write(out)
 			return err
 		},
 	}

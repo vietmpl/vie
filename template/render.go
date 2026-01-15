@@ -1,7 +1,6 @@
 package template
 
 import (
-	"bytes"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -12,27 +11,24 @@ import (
 
 func (t Template) Render(context map[string]value.Value) (map[string][]byte, error) {
 	files := make(map[string][]byte)
-	var buf bytes.Buffer
 
 	onFile := func(f *File, parent string) error {
-		if err := render.Template(&buf, f.NameTemplate, context); err != nil {
+		name, err := render.Template(f.NameTemplate, context)
+		if err != nil {
 			return err
 		}
-		name := buf.String()
-		buf.Reset()
-		path := filepath.Join(parent, name)
+		path := filepath.Join(parent, string(name))
 
 		if f.ContentTemplate != nil {
 			path = strings.TrimSuffix(path, ".vie")
-			if err := render.Template(&buf, f.ContentTemplate, context); err != nil {
+			content, err := render.Template(f.ContentTemplate, context)
+			if err != nil {
 				return err
 			}
-			bytes := append([]byte(nil), buf.Bytes()...) // copy
-			buf.Reset()
 			if _, ok := files[path]; ok {
 				return fmt.Errorf("%s conflicts", path)
 			}
-			files[path] = bytes
+			files[path] = content
 		} else {
 			files[path] = f.Content
 		}
@@ -40,12 +36,11 @@ func (t Template) Render(context map[string]value.Value) (map[string][]byte, err
 	}
 
 	onDir := func(d *Dir, parent string) error {
-		if err := render.Template(&buf, d.NameTemplate, context); err != nil {
+		name, err := render.Template(d.NameTemplate, context)
+		if err != nil {
 			return err
 		}
-		name := buf.String()
-		buf.Reset()
-		d.Name = name
+		d.Name = string(name)
 		return nil
 	}
 

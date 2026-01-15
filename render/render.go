@@ -1,16 +1,20 @@
 package render
 
 import (
-	"io"
+	"bytes"
 
 	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/value"
 )
 
-func Template(w io.Writer, template *ast.Template, context map[string]value.Value) error {
+func Template(template *ast.Template, context map[string]value.Value) ([]byte, error) {
+	var buf bytes.Buffer
 	r := renderer{
 		context: context,
-		w:       w,
+		w:       &buf,
 	}
-	return r.renderBlocks(template.Blocks)
+	if err := r.renderBlocks(template.Blocks); err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }

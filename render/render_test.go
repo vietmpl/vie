@@ -1,7 +1,6 @@
 package render_test
 
 import (
-	"bytes"
 	"testing"
 
 	"github.com/vietmpl/vie/parse"
@@ -193,7 +192,7 @@ func TestTemplate(t *testing.T) {
 				t.Error(err)
 			}
 
-			if err := render.Template(&bytes.Buffer{}, template, test.context); err == nil {
+			if _, err := render.Template(template, test.context); err == nil {
 				t.Errorf("succeeded unexpectedly")
 			}
 		})
@@ -213,12 +212,12 @@ func expectRender(
 		t.Fatal(err)
 	}
 
-	var buf bytes.Buffer
-	if err := render.Template(&buf, template, context); err != nil {
+	actual, err := render.Template(template, context)
+	if err != nil {
 		t.Error(err)
 	}
 
-	if expectedSource != buf.String() {
-		t.Errorf("expected %q, got %q", expectedSource, buf.String())
+	if expectedSource != string(actual) {
+		t.Errorf("expected %q, got %q", expectedSource, actual)
 	}
 }
