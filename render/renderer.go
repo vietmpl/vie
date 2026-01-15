@@ -1,8 +1,8 @@
 package render
 
 import (
+	"bytes"
 	"fmt"
-	"io"
 
 	"github.com/vietmpl/vie/ast"
 	"github.com/vietmpl/vie/builtin"
@@ -12,7 +12,7 @@ import (
 
 type renderer struct {
 	context map[string]value.Value
-	w       io.Writer
+	buffer  bytes.Buffer
 }
 
 func (r *renderer) renderBlocks(b []ast.Block) error {
@@ -27,7 +27,7 @@ func (r *renderer) renderBlocks(b []ast.Block) error {
 func (r *renderer) renderBlock(b ast.Block) error {
 	switch block := b.(type) {
 	case *ast.TextBlock:
-		_, _ = io.WriteString(r.w, block.Content)
+		r.buffer.WriteString(block.Content)
 		return nil
 
 	case *ast.CommentBlock:
@@ -43,7 +43,7 @@ func (r *renderer) renderBlock(b ast.Block) error {
 		if err != nil {
 			return err
 		}
-		io.WriteString(r.w, string(stringValue))
+		r.buffer.WriteString(string(stringValue))
 		return nil
 
 	case *ast.IfBlock:
