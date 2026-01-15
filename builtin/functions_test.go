@@ -3,7 +3,6 @@ package builtin
 import (
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/vietmpl/vie/value"
 )
 
@@ -19,8 +18,8 @@ func runFuncTests(t *testing.T, fn func([]value.Value) value.Value, cases []test
 			t.Parallel()
 			got := fn([]value.Value{tt.input})
 
-			if diff := cmp.Diff(tt.want, got); diff != "" {
-				t.Errorf("(-want +got):\n%s", diff)
+			if tt.want != got {
+				t.Errorf("expected %q, got %q", tt.want, got)
 			}
 		})
 	}

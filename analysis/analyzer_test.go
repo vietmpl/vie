@@ -1,9 +1,10 @@
 package analysis_test
 
 import (
+	"maps"
+	"slices"
 	"testing"
 
-	"github.com/google/go-cmp/cmp"
 	"github.com/vietmpl/vie/analysis"
 	"github.com/vietmpl/vie/parse"
 	"github.com/vietmpl/vie/value"
@@ -38,12 +39,12 @@ func TestTypes(t *testing.T) {
 			analyzer.Template(f, "")
 			typemap, diagnostics := analyzer.Results()
 
-			if diff := cmp.Diff(testCase.typemap, typemap); diff != "" {
-				t.Errorf("(-want +got):\n%s", diff)
+			if !maps.Equal(testCase.typemap, typemap) {
+				t.Errorf("expected %v, got %v", testCase.typemap, typemap)
 			}
 
-			if diff := cmp.Diff(testCase.diagnostics, diagnostics); diff != "" {
-				t.Errorf("(-want +got):\n%s", diff)
+			if !slices.Equal(testCase.diagnostics, diagnostics) {
+				t.Errorf("expected %v, got %v", testCase.diagnostics, diagnostics)
 			}
 		})
 	}
